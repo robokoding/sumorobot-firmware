@@ -1,6 +1,7 @@
 from utime import sleep_us
 from machine import Pin, PWM, ADC, time_pulse_us
 
+# add your WiFi SSID and password
 WIFIS = dict({
 "": ""})
 
