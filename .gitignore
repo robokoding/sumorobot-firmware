@@ -1,8 +1,1 @@
-# everything
-*
-
-# except
-!hal.py
-!LICENSE
-!README.md
-!.gitignore
+esp32*
