@@ -1,16 +1,14 @@
-all:
-	ampy -p /dev/tty.SLAB_USBtoUART put hal.py
-	ampy -p /dev/tty.SLAB_USBtoUART put main.py
-	ampy -p /dev/tty.SLAB_USBtoUART put boot.py
-	ampy -p /dev/tty.SLAB_USBtoUART put wifis.json
+all: flash update wifis
 	ampy -p /dev/tty.SLAB_USBtoUART put uwebsockets.py
 
 update:
+	sleep 3
 	ampy -p /dev/tty.SLAB_USBtoUART put hal.py
-        ampy -p /dev/tty.SLAB_USBtoUART put main.py
-        ampy -p /dev/tty.SLAB_USBtoUART put boot.py
+	ampy -p /dev/tty.SLAB_USBtoUART put main.py
+	ampy -p /dev/tty.SLAB_USBtoUART put boot.py
 
 wifis:
+	sleep 3
 	ampy -p /dev/tty.SLAB_USBtoUART put wifis.json
 
 flash:
