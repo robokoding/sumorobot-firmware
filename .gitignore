@@ -1,1 +1,2 @@
-esp32*
+# ignore the ESP32 MicroPython binary
+esp32*.bin
