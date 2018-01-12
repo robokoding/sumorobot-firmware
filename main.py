@@ -1,9 +1,11 @@
 import _thread
 import ubinascii
-from machine import Pin, PWM, Timer
 
+# WebSocket connection
 conn = None
+# blockly highlihgt WebSocket connection
 conn_highlight = None
+# extract a unique name for the robot from the device MAC address
 name = "sumo-%s" % ubinascii.hexlify(wlan.config("mac")[-3:]).decode("ascii")
 
 # remote server
@@ -14,8 +16,11 @@ url_highlight = "ws://iot.koodur.com:80/p2p/" + name + "-highlight/browser/"
 #url = "ws://10.42.0.1:80/p2p/" + name + "/browser/"
 #url_highlight = "ws://10.42.0.1:80/p2p/" + name + "-highlight/browser/"
 
+# code to execute
 ast = ""
+# scope, info to be sent to the client
 scope = dict()
+# SumoRobot object
 sumorobot = None
 
 def step():
@@ -31,9 +36,11 @@ def step():
         )
         # execute code
         exec(ast)
+        # when robot was stopped
         if sumorobot.terminate:
-            # disable forceful termination
+            # disable forceful termination of delays in code
             sumorobot.terminate = False
+            # stop the robot
             sumorobot.move(STOP)
         # leave time to process WebSocket commands
         sleep_ms(50)
@@ -41,7 +48,6 @@ def step():
 def ws_handler():
     global ast
     global conn
-    global no_delay
 
     while True:
         try:
@@ -72,13 +78,14 @@ def ws_handler():
         elif data == b"ping":
             conn.send(repr(scope))
         elif data.startswith("start:"):
-            print("Got code")#, data[6:])
+            #print("Got code:", data[6:])
             ast = compile(data[6:], "snippet", "exec")
         elif data == b"stop":
             ast = ""
             sumorobot.move(STOP)
+            # for terminating delays in code
             sumorobot.terminate = True
-            print("Got stop")
+            #print("Got stop")
         elif b"Gone" in data:
             print("Server said 410 Gone, attempting to reconnect...")
             conn = uwebsockets.connect(url)
@@ -98,7 +105,7 @@ print("Sending ping")
 conn.send("{'ping': true}")
 conn.send("{'ip': '" + wlan.ifconfig()[0] + "'}")
 
-# connect to the block highlight websocket
+# connect to the blockly highlight websocket
 conn_highlight = uwebsockets.connect(url_highlight)
 
 # initialize SumoRobot object
