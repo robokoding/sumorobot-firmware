@@ -7,9 +7,9 @@ update:
 	ampy -p /dev/tty.SLAB_USBtoUART put main.py
 	ampy -p /dev/tty.SLAB_USBtoUART put boot.py
 
-wifis:
+config:
 	sleep 3
-	ampy -p /dev/tty.SLAB_USBtoUART put wifis.json
+	ampy -p /dev/tty.SLAB_USBtoUART put config.json
 
 flash:
 	esptool.py -p /dev/tty.SLAB_USBtoUART -b 460800 erase_flash
