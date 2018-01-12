@@ -14,9 +14,9 @@ url_highlight = "ws://iot.koodur.com:80/p2p/" + name + "-highlight/browser/"
 #url = "ws://10.42.0.1:80/p2p/" + name + "/browser/"
 #url_highlight = "ws://10.42.0.1:80/p2p/" + name + "-highlight/browser/"
 
+ast = ""
 scope = dict()
 sumorobot = None
-ast = "sumorobot.move(STOP)"
 
 def step():
     global scope
