@@ -1,3 +1,4 @@
+import ujson
 from utime import sleep_us, sleep_ms
 from machine import Pin, PWM, ADC, time_pulse_us
 
@@ -133,7 +134,7 @@ class Sumorobot(object):
             self.set_led(LEFT_LINE, line)
             return line
         elif dir == RIGHT:
-            line = abs(self.adc_line_right.read() - config["right_line_threshold"] > 1000
+            line = abs(self.adc_line_right.read() - config["right_line_threshold"]) > 1000
             self.set_led(RIGHT_LINE, line)
             return line
 
