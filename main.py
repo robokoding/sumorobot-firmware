@@ -1,5 +1,6 @@
 import _thread
 import ubinascii
+import uwebsockets
 
 # WebSocket connection
 conn = None
