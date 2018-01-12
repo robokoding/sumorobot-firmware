@@ -1,4 +1,4 @@
 # ignore the ESP32 MicroPython binary
 esp32*.bin
-# ignore the WiFis development config file
-wifis-dev.json
+# ignore the development config file
+config-dev.json
