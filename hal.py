@@ -14,30 +14,15 @@ RIGHT = 2
 FORWARD = 3
 BACKWARD = 4
 
-# blockl highlight
-BLOCK_HIGHLIGHT = True
-
-# Battery resistor ladder ratio
-BATTERY_COEFF = 2.25
-
-# Ultrasonic sensor calibration
-ULTRASONIC_OFFSET = 800
-
-# Servo timing
-MOTOR_LEFT_TUNING = 33
-MOTOR_RIGHT_TUNING = 33
-
-# Calibrate line sensors
-LINE_LEFT_THRESHOLD = 1000
-LINE_RIGHT_THRESHOLD = 1000
+config = ujson.loads(open("config.json", "r").read())
 
 class Sumorobot(object):
 
-    # Ultrasonic distance sensor
+    # ultrasonic distance sensor
     echo = Pin(14, Pin.IN)
     trigger = Pin(27, Pin.OUT)
 
-    # Motor PWM-s
+    # Servo PWM-s
     pwm_left = PWM(Pin(15), freq=50, duty=0)
     pwm_right = PWM(Pin(4), freq=50, duty=0)
 
@@ -50,10 +35,10 @@ class Sumorobot(object):
     left_line_led = Pin(17, Pin.OUT)
     right_line_led = Pin(12, Pin.OUT)
 
-    # Battery gauge
+    # battery gauge
     adc_battery = ADC(Pin(32))
 
-    # Optek sensors
+    # the phototransistors
     adc_line_left = ADC(Pin(34))
     adc_line_right = ADC(Pin(33))
 
@@ -62,7 +47,7 @@ class Sumorobot(object):
     adc_line_left.atten(ADC.ATTN_11DB)
     adc_line_right.atten(ADC.ATTN_11DB)
 
-    # for highlighting blocks
+    # for highlighting blockly blocks
     highlight_block = None
 
     # for terminating sleep
@@ -72,6 +57,7 @@ class Sumorobot(object):
         self.highlight_block = highlight_block
 
     def set_led(self, led, state):
+        # set the given LED state
         if led == STATUS:
             self.bottom_led.value(0 if state else 1)
         elif led == ENEMY:
@@ -82,7 +68,7 @@ class Sumorobot(object):
             self.right_line_led.value(state)
 
     def get_battery_voltage(self):
-        return round(BATTERY_COEFF * (self.adc_battery.read() * 3.3 / 4096), 2)
+        return round(config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
 
     def get_enemy_distance(self):
         # send a pulse
@@ -96,13 +82,14 @@ class Sumorobot(object):
 
     enemy_score = 0
     def is_enemy(self, block_id = None):
-        if block_id and BLOCK_HIGHLIGHT:
+        # if block_id given and blockly highlight is on
+        if block_id and config["blockly_highlight"]:
             self.highlight_block(block_id)
 
         # get the enemy distance
         self.enemy_distance = self.get_enemy_distance()
         # if the enemy is close and the ping actually returned
-        if self.enemy_distance < 60 and self.enemy_distance > 0:
+        if self.enemy_distance < config["ultrasonic_distance"] and self.enemy_distance > 0:
             # if not maximum score
             if self.enemy_score < 5:
                 # increase the enemy score
@@ -126,6 +113,7 @@ class Sumorobot(object):
         # check for valid direction
         assert dir == LEFT or dir == RIGHT
 
+        # return the given line sensor value
         if dir == LEFT:
             return self.adc_line_left.read()
         elif dir == RIGHT:
@@ -135,16 +123,17 @@ class Sumorobot(object):
         # check for valid direction
         assert dir == LEFT or dir == RIGHT
 
-        # if block_id given and BLOCK_HIGHLIGHT
-        if block_id and BLOCK_HIGHLIGHT:
+        # if block_id given and blockly highlight is on
+        if block_id and config["blockly_highlight"]:
             self.highlight_block(block_id)
 
+        # return the given line sensor value
         if dir == LEFT:
-            line = abs(self.adc_line_left.read() - LINE_LEFT_THRESHOLD) > 1000
+            line = abs(self.adc_line_left.read() - config["left_line_threshold"]) > 1000
             self.set_led(LEFT_LINE, line)
             return line
         elif dir == RIGHT:
-            line = abs(self.adc_line_right.read() - LINE_RIGHT_THRESHOLD) > 1000
+            line = abs(self.adc_line_right.read() - config["right_line_threshold"] > 1000
             self.set_led(RIGHT_LINE, line)
             return line
 
@@ -166,26 +155,27 @@ class Sumorobot(object):
         # record the new speed
         self.prev_speed[dir] = speed
 
+        # set the given servo speed
         if dir == LEFT:
             if speed == 0:
                 self.pwm_left.duty(0)
             else:
-                self.pwm_left.duty(int(33 + MOTOR_LEFT_TUNING + speed * 33 / 100)) # -100 ... 100 to 33 .. 102
+                self.pwm_left.duty(int(33 + config["left_servo_tuning"] + speed * 33 / 100)) # -100 ... 100 to 33 .. 102
         elif dir == RIGHT:
             if speed == 0:
                 self.pwm_right.duty(0)
             else:
-                self.pwm_right.duty(int(33 + MOTOR_RIGHT_TUNING + speed * 33 / 100)) # -100 ... 100 to 33 .. 102
-
+                self.pwm_right.duty(int(33 + config["right_servo_tuning"] + speed * 33 / 100)) # -100 ... 100 to 33 .. 102
 
     def move(self, dir, block_id = None):
         # check for valid direction
         assert dir == STOP or dir == RIGHT or dir == LEFT or dir == BACKWARD or dir == FORWARD
 
-        # if block_id given and BLOCK_HIGHLIGHT
-        if block_id and BLOCK_HIGHLIGHT:
+        # if block_id given and blockly highlight is on
+        if block_id and config["blockly_highlight"]:
             self.highlight_block(block_id)
 
+        # go to the given direction
         if dir == STOP:
             self.set_servo(LEFT, 0)
             self.set_servo(RIGHT, 0)
@@ -206,12 +196,15 @@ class Sumorobot(object):
         # check for valid delay
         assert delay > 0
 
-        # if block_id given and BLOCK_HIGHLIGHT
-        if block_id and BLOCK_HIGHLIGHT:
+        # if block_id given and blockly highlight is on
+        if block_id and config["blockly_highlight"]:
             self.highlight_block(block_id)
 
+        # split the delay into 50ms chunks
         for j in range(0, delay, 50):
+            # check for forceful termination
             if self.terminate:
-                return # TODO: raise exception
+                # terminate the delay
+                return
             else:
                 sleep_ms(50)

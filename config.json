@@ -1,3 +1,12 @@
 {
-	"": ""
+		"battery_coeff": 2.25,
+		"block_highlight": true,
+		"left_servo_tuning": 33,
+		"right_servo_tuning": 33,
+		"ultrasonic_distance": 60,
+		"left_line_threshold": 1000,
+		"right_line_threshold": 1000,
+		"wifis": {
+				"RoboKoding": "salakala"
+		}
 }
