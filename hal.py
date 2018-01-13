@@ -1,3 +1,4 @@
+import os
 import ujson
 from utime import sleep_us, sleep_ms
 from machine import Pin, PWM, ADC, time_pulse_us
@@ -15,7 +16,10 @@ RIGHT = 2
 FORWARD = 3
 BACKWARD = 4
 
-config = ujson.loads(open("config.json", "r").read())
+# open and parse the config file
+config = None
+with open("config.json", "r") as config_file:
+    config = ujson.load(config_file)
 
 class Sumorobot(object):
 
@@ -54,6 +58,9 @@ class Sumorobot(object):
     # for terminating sleep
     terminate = False
 
+    # to smooth out ultrasonic sensor value
+    enemy_score = 0
+
     def __init__(self, highlight_block):
         self.highlight_block = highlight_block
 
@@ -81,7 +88,6 @@ class Sumorobot(object):
         # wait for the pulse and calculate the distance
         return (time_pulse_us(self.echo, 1, 30000) / 2) / 29.1
 
-    enemy_score = 0
     def is_enemy(self, block_id = None):
         # if block_id given and blockly highlight is on
         if block_id and config["blockly_highlight"]:
@@ -109,6 +115,15 @@ class Sumorobot(object):
         self.set_led(ENEMY, enemy)
 
         return enemy
+
+    def calibrate_line(self):
+        # read the line sensor values
+        config["left_line_threshold"] = self.adc_line_left.read()
+        config["right_line_threshold"] = self.adc_line_right.read()
+        # update the config file
+        with open("config.part", "w") as config_file:
+            config_file.write(ujson.dumps(config))
+        os.rename("config.part", "config.json")
 
     def get_line(self, dir):
         # check for valid direction
