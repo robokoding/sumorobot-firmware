@@ -1,4 +1,4 @@
-all: flash update wifis
+all: flash update config
 	ampy -p /dev/tty.SLAB_USBtoUART put uwebsockets.py
 
 update:
