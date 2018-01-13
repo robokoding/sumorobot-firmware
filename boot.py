@@ -6,8 +6,10 @@ from time import sleep
 print("Press Ctrl-C to stop boot script...")
 sleep(0.2)
 
-# read the config file
-config = ujson.loads(open("config.json", "r").read())
+# open and parse the config file
+config = None
+with open("config.json", "r") as config_file:
+    config = ujson.load(config_file)
 
 # connect to WiFi
 wlan = network.WLAN(network.STA_IF)
