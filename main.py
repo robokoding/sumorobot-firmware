@@ -28,11 +28,15 @@ def step():
     global scope
 
     while True:
+        # execute to see LED feedback for sensors
+        sumorobot.is_opponent()
+        sumorobot.is_line(LEFT)
+        sumorobot.is_line(RIGHT)
         # update scope
         scope = dict(
-            enemy = sumorobot.is_enemy(),
-            line_left = sumorobot.is_line(LEFT),
-            line_right = sumorobot.is_line(RIGHT),
+            line_left = sumorobot.get_line(LEFT),
+            line_right = sumorobot.get_line(RIGHT),
+            opponent = sumorobot.get_opponent_distance(),
             battery_voltage = sumorobot.get_battery_voltage(),
         )
         # execute code

@@ -4,8 +4,8 @@ from utime import sleep_us, sleep_ms
 from machine import Pin, PWM, ADC, time_pulse_us
 
 # LEDs
-ENEMY = 0
-STATUS = 1
+STATUS = 0
+OPPONENT = 1
 LEFT_LINE = 2
 RIGHT_LINE = 3
 
@@ -36,7 +36,7 @@ class Sumorobot(object):
     # bottom LED is in reverse polarity
     bottom_led.value(1)
     # sensor LEDs
-    enemy_led = Pin(16, Pin.OUT)
+    opponent_led = Pin(16, Pin.OUT)
     left_line_led = Pin(17, Pin.OUT)
     right_line_led = Pin(12, Pin.OUT)
 
@@ -59,7 +59,7 @@ class Sumorobot(object):
     terminate = False
 
     # to smooth out ultrasonic sensor value
-    enemy_score = 0
+    opponent_score = 0
 
     def __init__(self, highlight_block):
         self.highlight_block = highlight_block
@@ -68,8 +68,8 @@ class Sumorobot(object):
         # set the given LED state
         if led == STATUS:
             self.bottom_led.value(0 if state else 1)
-        elif led == ENEMY:
-            self.enemy_led.value(state)
+        elif led == OPPONENT:
+            self.opponent_led.value(state)
         elif led == LEFT_LINE:
             self.left_line_led.value(state)
         elif led == RIGHT_LINE:
@@ -78,7 +78,7 @@ class Sumorobot(object):
     def get_battery_voltage(self):
         return round(config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
 
-    def get_enemy_distance(self):
+    def get_opponent_distance(self):
         # send a pulse
         self.trigger.value(0)
         sleep_us(5)
@@ -88,33 +88,33 @@ class Sumorobot(object):
         # wait for the pulse and calculate the distance
         return (time_pulse_us(self.echo, 1, 30000) / 2) / 29.1
 
-    def is_enemy(self, block_id = None):
+    def is_opponent(self, block_id = None):
         # if block_id given and blockly highlight is on
         if block_id and config["blockly_highlight"]:
             self.highlight_block(block_id)
 
-        # get the enemy distance
-        self.enemy_distance = self.get_enemy_distance()
-        # if the enemy is close and the ping actually returned
-        if self.enemy_distance < config["ultrasonic_distance"] and self.enemy_distance > 0:
+        # get the opponent distance
+        self.opponent_distance = self.get_opponent_distance()
+        # if the opponent is close and the ping actually returned
+        if self.opponent_distance < config["ultrasonic_distance"] and self.opponent_distance > 0:
             # if not maximum score
-            if self.enemy_score < 5:
-                # increase the enemy score
-                self.enemy_score += 1
-        # if no enemy was detected
+            if self.opponent_score < 5:
+                # increase the opponent score
+                self.opponent_score += 1
+        # if no opponent was detected
         else:
             # if not lowest score
-            if self.enemy_score > 0:
-                # decrease the enemy score
-                self.enemy_score -= 1
+            if self.opponent_score > 0:
+                # decrease the opponent score
+                self.opponent_score -= 1
 
         # if the sensor saw something more than 2 times
-        enemy = True if self.enemy_score > 2 else False
+        opponent = True if self.opponent_score > 2 else False
 
-        # trigger enemy LED
-        self.set_led(ENEMY, enemy)
+        # trigger opponent LED
+        self.set_led(OPPONENT, opponent)
 
-        return enemy
+        return opponent
 
     def calibrate_line(self):
         # read the line sensor values
