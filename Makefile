@@ -1,16 +1,18 @@
+SERIAL_PORT=/dev/tty.SLAB_USBtoUART
+
 all: flash update config
-	ampy -p /dev/tty.SLAB_USBtoUART put uwebsockets.py
+	ampy -p $(SERIAL_PORT) put uwebsockets.py
 
 update:
 	sleep 3
-	ampy -p /dev/tty.SLAB_USBtoUART put hal.py
-	ampy -p /dev/tty.SLAB_USBtoUART put main.py
-	ampy -p /dev/tty.SLAB_USBtoUART put boot.py
+	ampy -p $(SERIAL_PORT) put hal.py
+	ampy -p $(SERIAL_PORT) put main.py
+	ampy -p $(SERIAL_PORT) put boot.py
 
 config:
 	sleep 3
-	ampy -p /dev/tty.SLAB_USBtoUART put config.json
+	ampy -p $(SERIAL_PORT) put config.json
 
 flash:
-	esptool.py -p /dev/tty.SLAB_USBtoUART -b 460800 erase_flash
-	esptool.py -p /dev/tty.SLAB_USBtoUART -b 460800 write_flash --flash_mode dio 0x1000 esp32-*.bin
+	esptool.py -p $(SERIAL_PORT) -b 460800 erase_flash
+	esptool.py -p $(SERIAL_PORT) -b 460800 write_flash --flash_mode dio 0x1000 esp32-*.bin
