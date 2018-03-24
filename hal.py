@@ -32,7 +32,7 @@ class Sumorobot(object):
     pwm_right = PWM(Pin(4), freq=50, duty=0)
 
     # bottom LED
-    bottom_led = Pin(5, Pin.OUT)
+    bottom_led = Pin(22, Pin.OUT)
     # bottom LED is in reverse polarity
     bottom_led.value(1)
     # sensor LEDs
@@ -42,6 +42,10 @@ class Sumorobot(object):
 
     # battery gauge
     adc_battery = ADC(Pin(32))
+
+    # the pullups for the phototransistors
+    Pin(19, Pin.IN, Pin.PULL_UP)
+    Pin(23, Pin.IN, Pin.PULL_UP)
 
     # the phototransistors
     adc_line_left = ADC(Pin(34))
