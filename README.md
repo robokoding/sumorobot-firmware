@@ -1,4 +1,5 @@
 # sumorobot-firmware
+[![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/robokoding/donate)  
 The software that is running on the SumoRobots
 
 # Instructions
