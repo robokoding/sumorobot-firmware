@@ -2,11 +2,13 @@
 
 The software that is running on the SumoRobots
 
+<img alt="Code" src="https://www.robokoding.com/assets/images/firmware.png" width="50%">
+
 # Instructions
 * Change the SERIAL_PORT in the Makefile
 * Add your WiFi networks to the config.json file
 * Install [Python](https://www.python.org/downloads/)
-* Install [esptool](https://github.com/espressif/esptool) (to communicate with the ESP32 board)
+* Install [esptool](https://github.com/espressif/esptool) (to flash MicroPython to the ESP32)
 * Install [ampy](https://github.com/adafruit/ampy) (for uploading files)
 * Download [the MicroPython binary](http://micropython.org/download#esp32) to this directory
 * Upload the MicroPython binary and the SumoRobot firmware to your ESP32 (open a terminal and type: make all)
