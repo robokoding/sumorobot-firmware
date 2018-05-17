@@ -1,4 +1,6 @@
 SERIAL_PORT=/dev/tty.SLAB_USBtoUART
+#SERIAL_PORT=/dev/tty.wchusbserial1420
+#SERIAL_PORT=/dev/ttyUSB0
 
 all: flash update config
 	ampy -p $(SERIAL_PORT) put uwebsockets.py
