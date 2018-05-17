@@ -2,6 +2,8 @@ import _thread
 import ubinascii
 import uwebsockets
 
+# to remember WiFi disconnects
+has_wifi_connection = False
 # WebSocket connection
 conn = None
 # blockly highlihgt WebSocket connection
@@ -53,13 +55,30 @@ def step():
 def ws_handler():
     global ast
     global conn
+    global has_wifi_connection
 
     while True:
+        # when WiFi is connected
+        if wlan.isconnected():
+            # when WiFi has just been reconnected
+            if not has_wifi_connection:
+                conn = uwebsockets.connect(url)
+                sumorobot.set_led(STATUS, True)
+                has_wifi_connection = True
+        else: # when WiFi is not connected
+            # when WiFi has just been disconnected
+            if has_wifi_connection:
+                sumorobot.set_led(STATUS, False)
+                has_wifi_connection = False
+            # continue to wait for a WiFi connection
+            continue
+
         try:
             fin, opcode, data = conn.read_frame()
         except: # urror
-            print("Exception while reading from socket, attempting reconnect")
-            conn = uwebsockets.connect(url)
+            # socket timeout, no data received
+            print("socket timeout")
+            # continue to read again from socket
             continue
 
         if data == b"forward":
@@ -107,6 +126,9 @@ while not wlan.isconnected():
 # connect to the websocket
 print("Connecting to:", url)
 conn = uwebsockets.connect(url)
+
+# set X seconds timeout for socket reads
+conn.settimeout(1)
 
 # send a ping to the robot
 print("Sending ping")
