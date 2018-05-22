@@ -2,12 +2,12 @@ import _thread
 import ubinascii
 import uwebsockets
 
-# to remember WiFi disconnects
-has_wifi_connection = False
 # WebSocket connection
 conn = None
 # blockly highlihgt WebSocket connection
 conn_highlight = None
+# to remember WiFi disconnects
+has_wifi_connection = False
 # extract a unique name for the robot from the device MAC address
 name = "sumo-%s" % ubinascii.hexlify(wlan.config("mac")[-3:]).decode("ascii")
 
@@ -73,12 +73,10 @@ def ws_handler():
             # continue to wait for a WiFi connection
             continue
 
-        try:
+        try: # try to read from the WebSocket
             fin, opcode, data = conn.read_frame()
-        except: # urror
-            # socket timeout, no data received
-            print("socket timeout")
-            # continue to read again from socket
+        except: # socket timeout, no data received
+            # continue to reconnect to WiFi
             continue
 
         if data == b"forward":
@@ -114,24 +112,25 @@ def ws_handler():
             sumorobot.calibrate_line()
             #print("Got calibrate")
         elif b"Gone" in data:
-            print("Server said 410 Gone, attempting to reconnect...")
+            #print("Server said 410 Gone, attempting to reconnect...")
             conn = uwebsockets.connect(url)
         else:
-            print("unknown command:", data)
+            pass
+            #print("unknown command:", data)
 
 # wait for WiFi to get connected
 while not wlan.isconnected():
     sleep_ms(100)
 
 # connect to the websocket
-print("Connecting to:", url)
+#print("Connecting to:", url)
 conn = uwebsockets.connect(url)
 
 # set X seconds timeout for socket reads
 conn.settimeout(1)
 
 # send a ping to the robot
-print("Sending ping")
+#print("Sending ping")
 conn.send("{'ping': true}")
 conn.send("{'ip': '" + wlan.ifconfig()[0] + "'}")
 
@@ -144,7 +143,7 @@ sumorobot = Sumorobot(conn_highlight.send)
 # indicate that the WebSocket is connected
 sumorobot.set_led(STATUS, True)
 
-print("Starting WebSocket and code loop")
+#print("Starting WebSocket and code loop")
 # start the code processing thread
 _thread.start_new_thread(step, ())
 # start the Websocket processing thread

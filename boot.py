@@ -3,7 +3,7 @@ import network
 from hal import *
 from time import sleep
 
-print("Press Ctrl-C to stop boot script...")
+#print("Press Ctrl-C to stop boot script...")
 sleep(0.2)
 
 # open and parse the config file
@@ -25,7 +25,7 @@ if not wlan.isconnected():
         ssid = network[0].decode("utf-8")
         # check if the SSID is in the config file
         if ssid in config["wifis"].keys():
-            print("connecting to: " + ssid)
+            #print("connecting to: " + ssid)
             # start to connect to the pre-configured network
             wlan.connect(ssid, config["wifis"][ssid])
             break
