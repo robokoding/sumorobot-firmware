@@ -13,8 +13,9 @@ RIGHT_LINE = 3
 STOP = 0
 LEFT = 1
 RIGHT = 2
-FORWARD = 3
-BACKWARD = 4
+SEARCH = 3
+FORWARD = 4
+BACKWARD = 5
 
 class Sumorobot(object):
     # Constructor
@@ -40,6 +41,8 @@ class Sumorobot(object):
         self.right_line_led = Pin(12, Pin.OUT)
 
         # Battery gauge
+        self.bat_status = 4.3
+        self.move_counter = 0
         self.adc_battery = ADC(Pin(32))
 
         # The pullups for the phototransistors
@@ -60,6 +63,10 @@ class Sumorobot(object):
 
         # For terminating sleep
         self.terminate = False
+        
+        # For search mode
+        self.search = False
+        self.search_counter = 0
 
         # Memorise previous servo speeds
         self.prev_speed = {LEFT: 0, RIGHT: 0}
@@ -85,7 +92,17 @@ class Sumorobot(object):
 
     # Function to get battery voltage
     def get_battery_voltage(self):
-        return round(self.config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
+        bat = round(self.config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
+        # When the SumoRobot is not moving
+        if self.prev_speed[LEFT] == 0 and self.prev_speed[RIGHT] == 0:
+            if self.move_counter > 0:
+                self.move_counter -= 1
+            if self.bat_status < bat - 0.20 and self.move_counter == 0:
+                deepsleep()
+            self.bat_status = bat
+        else:
+            self.move_counter = 10
+        return bat
 
     # Function to get distance (cm) from the object in front of the SumoRobot
     def get_opponent_distance(self):
@@ -211,6 +228,18 @@ class Sumorobot(object):
         elif dir == RIGHT:
             self.set_servo(LEFT, 100)
             self.set_servo(RIGHT, 100)
+        elif dir == SEARCH:
+            # Change search mode after X seconds
+            if self.search_counter == 50:
+                self.search = not self.search
+                self.search_counter = 0
+            # When to search
+            if self.search:
+                self.move(FORWARD, block_id)
+            else:
+                self.move(LEFT, block_id)
+            # Increase search counter
+            self.search_counter += 1
         elif dir == FORWARD:
             self.set_servo(LEFT, 100)
             self.set_servo(RIGHT, -100)
