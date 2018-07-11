@@ -2,149 +2,131 @@ import _thread
 import ubinascii
 import uwebsockets
 
-# WebSocket connection
-conn = None
-# blockly highlihgt WebSocket connection
-conn_highlight = None
-# to remember WiFi disconnects
-has_wifi_connection = False
-# extract a unique name for the robot from the device MAC address
-name = "sumo-%s" % ubinascii.hexlify(wlan.config("mac")[-3:]).decode("ascii")
+# Extract a unique name for the robot from the device MAC address
+mac = ubinascii.hexlify(wlan.config("mac")[-3:]).decode("ascii")
 
-# remote server
-url = "ws://iot.koodur.com:80/p2p/" + name + "/browser/"
-url_highlight = "ws://iot.koodur.com:80/p2p/" + name + "-highlight/browser/"
-
-# local server
+# Remote server
+url = "ws://ws.achex.ca:4010"
+# Local server
 #url = "ws://10.42.0.1:80/p2p/" + name + "/browser/"
-#url_highlight = "ws://10.42.0.1:80/p2p/" + name + "-highlight/browser/"
 
-# code to execute
+# Code to execute
 ast = ""
-# scope, info to be sent to the client
+# Scope, info to be sent to the client
 scope = dict()
-# SumoRobot object
-sumorobot = None
 
 def step():
     global scope
 
     while True:
-        # execute to see LED feedback for sensors
+        # Execute to see LED feedback for sensors
         sumorobot.is_opponent()
         sumorobot.is_line(LEFT)
         sumorobot.is_line(RIGHT)
-        # update scope
+        # Update scope
         scope = dict(
+            to = "browser-%s@00000514" % mac,
             line_left = sumorobot.get_line(LEFT),
             line_right = sumorobot.get_line(RIGHT),
             opponent = sumorobot.get_opponent_distance(),
             battery_voltage = sumorobot.get_battery_voltage(),
         )
-        # execute code
+        # Execute code
         exec(ast)
-        # when robot was stopped
+        # When robot was stopped
         if sumorobot.terminate:
-            # disable forceful termination of delays in code
+            # Disable forceful termination of delays in code
             sumorobot.terminate = False
-            # stop the robot
+            # Stop the robot
             sumorobot.move(STOP)
-        # leave time to process WebSocket commands
+        # Leave time to process WebSocket commands
         sleep_ms(50)
 
 def ws_handler():
     global ast
-    global conn
     global has_wifi_connection
 
     while True:
-        # when WiFi is connected
-        if wlan.isconnected():
-            # when WiFi has just been reconnected
-            if not has_wifi_connection:
-                conn = uwebsockets.connect(url)
-                sumorobot.set_led(STATUS, True)
-                has_wifi_connection = True
-        else: # when WiFi is not connected
-            # when WiFi has just been disconnected
-            if has_wifi_connection:
-                sumorobot.set_led(STATUS, False)
-                has_wifi_connection = False
-            # continue to wait for a WiFi connection
+        # When WiFi has just been reconnected
+        if wlan.isconnected() and not has_wifi_connection:
+            #conn = uwebsockets.connect(url)
+            sumorobot.set_led(STATUS, True)
+            has_wifi_connection = True
+        # When WiFi has just been disconnected
+        elif not wlan.isconnected() and has_wifi_connection:
+            sumorobot.set_led(STATUS, False)
+            has_wifi_connection = False
+        elif not wlan.isconnected():
+            # Continue to wait for a WiFi connection
             continue
 
-        try: # try to read from the WebSocket
-            fin, opcode, data = conn.read_frame()
-        except: # socket timeout, no data received
-            # continue to reconnect to WiFi
+        try: # Try to read from the WebSocket
+            data = conn.recv()
+        except: # Socket timeout, no data received
+            # Continue to try to read data
             continue
 
-        if data == b"forward":
-            #print("Going forward")
+        # When an empty frame was received
+        if not data:
+            # Continue to receive data
+            continue
+        elif b'forward' in data:
             ast = ""
             sumorobot.move(FORWARD)
-        elif data == b"backward":
-            #print("Going backward")
+        elif b'backward' in data:
             ast = ""
             sumorobot.move(BACKWARD)
-        elif data == b"right":
-            #print("Going right")
+        elif b'right' in data:
             ast = ""
             sumorobot.move(RIGHT)
-        elif data == b"left":
-            #print("Going left")
+        elif b'left' in data:
             ast = ""
             sumorobot.move(LEFT)
-        elif data == b"kick":
-            conn.send(repr(scope))
-        elif data == b"ping":
-            conn.send(repr(scope))
-        elif data.startswith("start:"):
-            #print("Got code:", data[6:])
-            ast = compile(data[6:], "snippet", "exec")
-        elif data == b"stop":
+        elif b'ping' in data:
+            conn.send(repr(scope).replace("'", '"'))
+        elif b'code' in data:
+            data = ujson.loads(data)
+            data['val'] = data['val'].replace(";;", "\n")
+            print("code:", data['val'])
+            ast = compile(data['val'], "snippet", "exec")
+        elif b'stop' in data:
             ast = ""
             sumorobot.move(STOP)
             # for terminating delays in code
             sumorobot.terminate = True
-            #print("Got stop")
-        elif data == b"calibrate_line":
+        elif b'calibrate_line' in data:
             sumorobot.calibrate_line()
-            #print("Got calibrate")
-        elif b"Gone" in data:
-            #print("Server said 410 Gone, attempting to reconnect...")
-            conn = uwebsockets.connect(url)
+        elif b'Gone' in data:
+            print("server said 410 Gone, attempting to reconnect...")
+            #conn = uwebsockets.connect(url)
         else:
-            pass
-            #print("unknown command:", data)
+            print("unknown cmd:", data)
 
-# wait for WiFi to get connected
+# Wait for WiFi to get connected
 while not wlan.isconnected():
     sleep_ms(100)
 
-# connect to the websocket
-#print("Connecting to:", url)
+# Connect to the websocket
 conn = uwebsockets.connect(url)
 
-# set X seconds timeout for socket reads
+# Set X seconds timeout for socket reads
 conn.settimeout(1)
 
-# send a ping to the robot
-#print("Sending ping")
-conn.send("{'ping': true}")
-conn.send("{'ip': '" + wlan.ifconfig()[0] + "'}")
+# Send a ping to the robot
+conn.send('{"setID": "sumo-%s@00000514", "passwd": "salakala"}' % mac)
+# Receive session and auth ok frames
+conn.recv()
+conn.recv()
 
-# connect to the blockly highlight websocket
-conn_highlight = uwebsockets.connect(url_highlight)
+# Stop bootup blinking
+timer.deinit()
 
-# initialize SumoRobot object
-sumorobot = Sumorobot(conn_highlight.send)
-
-# indicate that the WebSocket is connected
+# WiFi is connected
+has_wifi_connection = True
+# Indicate that the WebSocket is connected
 sumorobot.set_led(STATUS, True)
 
-#print("Starting WebSocket and code loop")
-# start the code processing thread
+# Start the code processing thread
 _thread.start_new_thread(step, ())
-# start the Websocket processing thread
+# Start the Websocket processing thread
 _thread.start_new_thread(ws_handler, ())
