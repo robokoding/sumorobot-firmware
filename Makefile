@@ -2,22 +2,21 @@
 SERIAL_PORT=/dev/tty.wchusbserial1410
 #SERIAL_PORT=/dev/ttyUSB0
 
-all: flash lib config update reboot
+all: flash lib config update reset
 
-reboot:
+reset:
 	esptool.py -p $(SERIAL_PORT) --after hard_reset read_mac
 
 lib:
-	sleep 1
-	ampy -p $(SERIAL_PORT) put uwebsockets.py
+	ampy -d 0.5 -p $(SERIAL_PORT) put uwebsockets.py
 
 update:
-	ampy -p $(SERIAL_PORT) put hal.py
-	ampy -p $(SERIAL_PORT) put main.py
-	ampy -p $(SERIAL_PORT) put boot.py
+	ampy -d 0.5 -p $(SERIAL_PORT) put hal.py
+	ampy -d 0.5 -p $(SERIAL_PORT) put main.py
+	ampy -d 0.5 -p $(SERIAL_PORT) put boot.py
 
 config:
-	ampy -p $(SERIAL_PORT) put config.json
+	ampy -d 0.5 -p $(SERIAL_PORT) put config.json
 
 flash:
 	esptool.py -p $(SERIAL_PORT) -b 460800 erase_flash
