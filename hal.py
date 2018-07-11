@@ -9,69 +9,67 @@ OPPONENT = 1
 LEFT_LINE = 2
 RIGHT_LINE = 3
 
-# directions
+# Directions
 STOP = 0
 LEFT = 1
 RIGHT = 2
 FORWARD = 3
 BACKWARD = 4
 
-# open and parse the config file
-config = None
-with open("config.json", "r") as config_file:
-    config = ujson.load(config_file)
-
 class Sumorobot(object):
+    # Constructor
+    def __init__(self, config = None):
+        # Config file
+        self.config = config
 
-    # ultrasonic distance sensor
-    echo = Pin(14, Pin.IN)
-    trigger = Pin(27, Pin.OUT)
+        # Ultrasonic distance sensor
+        self.echo = Pin(14, Pin.IN)
+        self.trigger = Pin(27, Pin.OUT)
 
-    # Servo PWM-s
-    pwm_left = PWM(Pin(15), freq=50, duty=0)
-    pwm_right = PWM(Pin(4), freq=50, duty=0)
+        # Servo PWM-s
+        self.pwm_left = PWM(Pin(15), freq=50, duty=0)
+        self.pwm_right = PWM(Pin(4), freq=50, duty=0)
 
-    # bottom LED
-    bottom_led = Pin(22, Pin.OUT)
-    # bottom LED is in reverse polarity
-    bottom_led.value(1)
-    # sensor LEDs
-    opponent_led = Pin(16, Pin.OUT)
-    left_line_led = Pin(17, Pin.OUT)
-    right_line_led = Pin(12, Pin.OUT)
+        # Bottom status LED
+        self.status_led = Pin(22, Pin.OUT)
+        # Bottom status LED is in reverse polarity
+        self.status_led.value(1)
+        # Sensor LEDs
+        self.opponent_led = Pin(16, Pin.OUT)
+        self.left_line_led = Pin(17, Pin.OUT)
+        self.right_line_led = Pin(12, Pin.OUT)
 
-    # battery gauge
-    adc_battery = ADC(Pin(32))
+        # Battery gauge
+        self.adc_battery = ADC(Pin(32))
 
-    # the pullups for the phototransistors
-    Pin(19, Pin.IN, Pin.PULL_UP)
-    Pin(23, Pin.IN, Pin.PULL_UP)
+        # The pullups for the phototransistors
+        Pin(19, Pin.IN, Pin.PULL_UP)
+        Pin(23, Pin.IN, Pin.PULL_UP)
 
-    # the phototransistors
-    adc_line_left = ADC(Pin(34))
-    adc_line_right = ADC(Pin(33))
+        # The phototransistors
+        self.adc_line_left = ADC(Pin(34))
+        self.adc_line_right = ADC(Pin(33))
 
-    # Set reference voltage to 3.3V
-    adc_battery.atten(ADC.ATTN_11DB)
-    adc_line_left.atten(ADC.ATTN_11DB)
-    adc_line_right.atten(ADC.ATTN_11DB)
+        # Set reference voltage to 3.3V
+        self.adc_battery.atten(ADC.ATTN_11DB)
+        self.adc_line_left.atten(ADC.ATTN_11DB)
+        self.adc_line_right.atten(ADC.ATTN_11DB)
 
-    # for highlighting blockly blocks
-    highlight_block = None
+        # To smooth out ultrasonic sensor value
+        self.opponent_score = 0
 
-    # for terminating sleep
-    terminate = False
+        # For terminating sleep
+        self.terminate = False
 
-    # to smooth out ultrasonic sensor value
-    opponent_score = 0
+        # Memorise previous servo speeds
+        self.prev_speed = {LEFT: 0, RIGHT: 0}
 
-    def __init__(self, highlight_block):
-        self.highlight_block = highlight_block
-
+    # Function to set LED states
     def set_led(self, led, state):
-        # set the given LED state
+        # Set the given LED state
         if led == STATUS:
-            self.bottom_led.value(0 if state else 1)
+            # Status LED is reverse polarity
+            self.status_led.value(0 if state else 1)
         elif led == OPPONENT:
             self.opponent_led.value(state)
         elif led == LEFT_LINE:
@@ -79,123 +77,131 @@ class Sumorobot(object):
         elif led == RIGHT_LINE:
             self.right_line_led.value(state)
 
-    def get_battery_voltage(self):
-        return round(config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
+    # Function to shortly bink status LED
+    def toggle_led(self, timer = None):
+        self.status_led.value(0)
+        sleep_ms(10)
+        self.status_led.value(1)
 
+    # Function to get battery voltage
+    def get_battery_voltage(self):
+        return round(self.config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
+
+    # Function to get distance (cm) from the object in front of the SumoRobot
     def get_opponent_distance(self):
-        # send a pulse
+        # Send a pulse
         self.trigger.value(0)
         sleep_us(5)
         self.trigger.value(1)
         sleep_us(10)
         self.trigger.value(0)
-        # wait for the pulse and calculate the distance
+        # Wait for the pulse and calculate the distance
         return (time_pulse_us(self.echo, 1, 30000) / 2) / 29.1
 
+    # Function to get boolean if there is something in front of the SumoRobot
     def is_opponent(self, block_id = None):
-        # if block_id given and blockly highlight is on
-        if block_id and config["blockly_highlight"]:
+        # When block_id given and blockly highlight is on
+        if block_id and self.config["blockly_highlight"]:
             self.highlight_block(block_id)
 
-        # get the opponent distance
+        # Get the opponent distance
         self.opponent_distance = self.get_opponent_distance()
-        # if the opponent is close and the ping actually returned
-        if self.opponent_distance < config["ultrasonic_distance"] and self.opponent_distance > 0:
-            # if not maximum score
+        # When the opponent is close and the ping actually returned
+        if self.opponent_distance < self.config["ultrasonic_distance"] and self.opponent_distance > 0:
+            # When not maximum score
             if self.opponent_score < 5:
-                # increase the opponent score
+                # Increase the opponent score
                 self.opponent_score += 1
-        # if no opponent was detected
+        # When no opponent was detected
         else:
-            # if not lowest score
+            # When not lowest score
             if self.opponent_score > 0:
-                # decrease the opponent score
+                # Decrease the opponent score
                 self.opponent_score -= 1
 
-        # if the sensor saw something more than 2 times
+        # When the sensor saw something more than 2 times
         opponent = True if self.opponent_score > 2 else False
 
-        # trigger opponent LED
+        # Trigger opponent LED
         self.set_led(OPPONENT, opponent)
 
         return opponent
 
+    # Function to update line calibration and write it to the config file
     def calibrate_line(self):
-        # read the line sensor values
-        config["left_line_threshold"] = self.adc_line_left.read()
-        config["right_line_threshold"] = self.adc_line_right.read()
-        # update the config file
+        # Read the line sensor values
+        self.config["left_line_threshold"] = self.adc_line_left.read()
+        self.config["right_line_threshold"] = self.adc_line_right.read()
+        # Update the config file
         with open("config.part", "w") as config_file:
             config_file.write(ujson.dumps(config))
         os.rename("config.part", "config.json")
 
+    # Function to get light inensity from the phototransistors
     def get_line(self, dir):
-        # check for valid direction
+        # Check for valid direction
         assert dir == LEFT or dir == RIGHT
 
-        # return the given line sensor value
+        # Return the given line sensor value
         if dir == LEFT:
             return self.adc_line_left.read()
         elif dir == RIGHT:
             return self.adc_line_right.read()
 
     def is_line(self, dir, block_id = None):
-        # check for valid direction
+        # Check for valid direction
         assert dir == LEFT or dir == RIGHT
 
-        # if block_id given and blockly highlight is on
-        if block_id and config["blockly_highlight"]:
+        # When block_id given and blockly highlight is on
+        if block_id and self.config["blockly_highlight"]:
             self.highlight_block(block_id)
 
-        # return the given line sensor value
+        # Return the given line sensor value
         if dir == LEFT:
-            line = abs(self.adc_line_left.read() - config["left_line_threshold"]) > 1000
+            line = abs(self.get_line(LEFT) - self.config["left_line_threshold"]) > 1000
             self.set_led(LEFT_LINE, line)
             return line
         elif dir == RIGHT:
-            line = abs(self.adc_line_right.read() - config["right_line_threshold"]) > 1000
+            line = abs(self.get_line(RIGHT) - self.config["right_line_threshold"]) > 1000
             self.set_led(RIGHT_LINE, line)
             return line
 
-    def detach_servos(self):
-        self.set_servo(LEFT, 0)
-        self.set_servo(RIGHT, 0)
-
-    prev_speed = {LEFT: 0, RIGHT: 0}
     def set_servo(self, dir, speed):
-        # check for valid direction
+        # Check for valid direction
         assert dir == LEFT or dir == RIGHT
-        # check for valid speed
+        # Check for valid speed
         assert speed <= 100 and speed >= -100
 
-        # when the speed didn't change
+        # When the speed didn't change
         if speed == self.prev_speed[dir]:
             return
 
-        # record the new speed
+        # Record the new speed
         self.prev_speed[dir] = speed
 
-        # set the given servo speed
+        # Set the given servo speed
         if dir == LEFT:
             if speed == 0:
                 self.pwm_left.duty(0)
             else:
-                self.pwm_left.duty(int(33 + config["left_servo_tuning"] + speed * 33 / 100)) # -100 ... 100 to 33 .. 102
+                # -100 ... 100 to 33 .. 102
+                self.pwm_left.duty(int(33 + self.config["left_servo_tuning"] + speed * 33 / 100))
         elif dir == RIGHT:
             if speed == 0:
                 self.pwm_right.duty(0)
             else:
-                self.pwm_right.duty(int(33 + config["right_servo_tuning"] + speed * 33 / 100)) # -100 ... 100 to 33 .. 102
+                # -100 ... 100 to 33 .. 102
+                self.pwm_right.duty(int(33 + self.config["right_servo_tuning"] + speed * 33 / 100))
 
     def move(self, dir, block_id = None):
-        # check for valid direction
+        # Check for valid direction
         assert dir == STOP or dir == RIGHT or dir == LEFT or dir == BACKWARD or dir == FORWARD
 
-        # if block_id given and blockly highlight is on
-        if block_id and config["blockly_highlight"]:
+        # When block_id given and blockly highlight is on
+        if block_id and self.config["blockly_highlight"]:
             self.highlight_block(block_id)
 
-        # go to the given direction
+        # Go to the given direction
         if dir == STOP:
             self.set_servo(LEFT, 0)
             self.set_servo(RIGHT, 0)
@@ -213,18 +219,18 @@ class Sumorobot(object):
             self.set_servo(RIGHT, 100)
 
     def sleep(self, delay, block_id = None):
-        # check for valid delay
+        # Check for valid delay
         assert delay > 0
 
-        # if block_id given and blockly highlight is on
-        if block_id and config["blockly_highlight"]:
+        # When block_id given and blockly highlight is on
+        if block_id and self.config["blockly_highlight"]:
             self.highlight_block(block_id)
 
-        # split the delay into 50ms chunks
+        # Split the delay into 50ms chunks
         for j in range(0, delay, 50):
-            # check for forceful termination
+            # Check for forceful termination
             if self.terminate:
-                # terminate the delay
+                # Terminate the delay
                 return
             else:
                 sleep_ms(50)
