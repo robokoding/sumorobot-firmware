@@ -1,35 +1,42 @@
 import ujson
 import network
 from hal import *
-from time import sleep
+from utime import sleep_ms
+from machine import Timer, Pin
 
-#print("Press Ctrl-C to stop boot script...")
-sleep(0.2)
+print("Press Ctrl-C to stop boot script...")
+sleep_ms(200)
 
-# open and parse the config file
-config = None
+# Open and parse the config file
 with open("config.json", "r") as config_file:
     config = ujson.load(config_file)
 
-# connect to WiFi
+# Initialize the SumoRobot object
+sumorobot = Sumorobot(config)
+
+# Indiacte booting with blinking status LED
+timer = Timer(0)
+sumorobot.toggle_led()
+timer.init(period=2000, mode=Timer.PERIODIC, callback=sumorobot.toggle_led)
+
+# Connect to WiFi
 wlan = network.WLAN(network.STA_IF)
-# activate the WiFi interface
+# Activate the WiFi interface
 wlan.active(True)
-# if not already connected
+# If not already connected
 if not wlan.isconnected():
-    # scan for WiFi networks
+    # Scan for WiFi networks
     networks = wlan.scan()
-    # go trough all scanned WiFi networks
+    # Go trough all scanned WiFi networks
     for network in networks:
-        # extract the networks SSID
+        # Extract the networks SSID
         ssid = network[0].decode("utf-8")
-        # check if the SSID is in the config file
+        # Check if the SSID is in the config file
         if ssid in config["wifis"].keys():
-            #print("connecting to: " + ssid)
-            # start to connect to the pre-configured network
+            # Start to connect to the pre-configured network
             wlan.connect(ssid, config["wifis"][ssid])
             break
 
-# clean up
+# Clean up
 import gc
 gc.collect()
