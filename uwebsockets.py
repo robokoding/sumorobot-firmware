@@ -6,11 +6,12 @@ https://github.com/aaugustin/websockets/blob/master/websockets/client.py
 """
 
 #import usocket as socket
-import ubinascii as binascii
-import urandom as random
+import os
 import ure as re
+import urandom as random
 import ustruct as struct
 import usocket as socket
+import ubinascii as binascii
 from ucollections import namedtuple
 
 # Opcodes
@@ -59,7 +60,6 @@ class Websocket:
         self._sock.settimeout(timeout)
 
     def read_frame(self, max_size=None):
-
         # Frame header
         byte1, byte2 = struct.unpack('!BB', self._sock.read(2))
 
@@ -93,7 +93,6 @@ class Websocket:
         return fin, opcode, data
 
     def write_frame(self, opcode, data=b''):
-
         fin = True
         mask = self.is_client  # messages sent by client are masked
 
@@ -145,7 +144,7 @@ class Websocket:
                 raise NotImplementedError()
 
             if opcode == OP_TEXT:
-                return data.decode('utf-8')
+                return data
             elif opcode == OP_BYTES:
                 return data
             elif opcode == OP_CLOSE:
@@ -166,7 +165,6 @@ class Websocket:
                 raise ValueError(opcode)
 
     def send(self, buf):
-
         assert self.open
 
         if isinstance(buf, str):
@@ -180,7 +178,6 @@ class Websocket:
         self.write_frame(opcode, buf)
 
     def close(self, code=CLOSE_OK, reason=''):
-
         if not self.open:
             return
 
@@ -196,36 +193,43 @@ class Websocket:
 class WebsocketClient(Websocket):
     is_client = True
 
-
 def connect(uri):
     """
     Connect a websocket.
     """
 
+    # Parse the given WebSocket URI
     uri = urlparse(uri)
     assert uri
 
+    # Connect the socket
     sock = socket.socket()
     addr = socket.getaddrinfo(uri.hostname, uri.port)
-    print(addr)
     sock.connect(addr[0][4])
 
-    def send_header(header, *args):
-        sock.send(header % args + '\r\n')
-
     # Sec-WebSocket-Key is 16 bytes of random base64 encoded
-    key = binascii.b2a_base64(bytes(random.getrandbits(8)
-                                    for _ in range(16)))[:-1]
+    key = binascii.b2a_base64(os.urandom(16))[:-1]
 
-    send_header(b'GET %s HTTP/1.1', uri.path or '/')
-    send_header(b'Host: %s:%s', uri.hostname, uri.port)
-    send_header(b'Connection: Upgrade')
-    send_header(b'Upgrade: websocket')
-    send_header(b'Sec-WebSocket-Key: %s', key)
-    send_header(b'Sec-WebSocket-Version: 13')
-    send_header(b'Origin: http://localhost')
-    send_header(b'')
+    # WebSocket initiation headers
+    headers = [
+    	b'GET / HTTP/1.1',
+    	b'Upgrade: websocket',
+    	b'Connection: Upgrade',
+    	b'Host: ws.achex.ca:4010',
+    	b'Origin: http://ws.achex.ca:4010',
+    	b'Sec-WebSocket-Key: ' + key,
+    	b'Sec-WebSocket-Version: 13',
+    	b'',
+    	b''
+    ]
 
+    # Concatenate the headers and add new lines
+    data = b'\r\n'.join(headers)
+
+    # Send the WebSocket initiation packet
+    sock.send(data)
+
+    # Check for the WebSocket response header
     header = sock.readline()[:-2]
     assert header == b'HTTP/1.1 101 Switching Protocols', header
 
