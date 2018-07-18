@@ -117,10 +117,6 @@ class Sumorobot(object):
 
     # Function to get boolean if there is something in front of the SumoRobot
     def is_opponent(self, block_id = None):
-        # When block_id given and blockly highlight is on
-        if block_id and self.config["blockly_highlight"]:
-            self.highlight_block(block_id)
-
         # Get the opponent distance
         self.opponent_distance = self.get_opponent_distance()
         # When the opponent is close and the ping actually returned
@@ -169,10 +165,6 @@ class Sumorobot(object):
         # Check for valid direction
         assert dir == LEFT or dir == RIGHT
 
-        # When block_id given and blockly highlight is on
-        if block_id and self.config["blockly_highlight"]:
-            self.highlight_block(block_id)
-
         # Return the given line sensor value
         if dir == LEFT:
             line = abs(self.get_line(LEFT) - self.config["left_line_threshold"]) > 1000
@@ -214,10 +206,6 @@ class Sumorobot(object):
         # Check for valid direction
         assert dir == STOP or dir == RIGHT or dir == LEFT or dir == BACKWARD or dir == FORWARD
 
-        # When block_id given and blockly highlight is on
-        if block_id and self.config["blockly_highlight"]:
-            self.highlight_block(block_id)
-
         # Go to the given direction
         if dir == STOP:
             self.set_servo(LEFT, 0)
@@ -250,10 +238,6 @@ class Sumorobot(object):
     def sleep(self, delay, block_id = None):
         # Check for valid delay
         assert delay > 0
-
-        # When block_id given and blockly highlight is on
-        if block_id and self.config["blockly_highlight"]:
-            self.highlight_block(block_id)
 
         # Split the delay into 50ms chunks
         for j in range(0, delay, 50):
