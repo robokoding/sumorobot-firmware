@@ -2,12 +2,15 @@
 SERIAL_PORT=/dev/tty.wchusbserial1410
 #SERIAL_PORT=/dev/ttyUSB0
 
-all: flash lib config update reset
+all: flash delay libs config update reset
+
+delay:
+	sleep 3
 
 reset:
 	esptool.py -p $(SERIAL_PORT) --after hard_reset read_mac
 
-lib:
+libs:
 	ampy -d 0.5 -p $(SERIAL_PORT) put uwebsockets.py
 
 update:
