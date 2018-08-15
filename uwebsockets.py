@@ -212,11 +212,11 @@ def connect(uri):
 
     # WebSocket initiation headers
     headers = [
-    	b'GET / HTTP/1.1',
+    	b'GET %s HTTP/1.1' % uri.path or '/',
     	b'Upgrade: websocket',
     	b'Connection: Upgrade',
-    	b'Host: ws.achex.ca:4010',
-    	b'Origin: http://ws.achex.ca:4010',
+    	b'Host: %s:%s' % (uri.hostname, uri.port),
+    	b'Origin: http://%s:%s' % (uri.hostname, uri.port),
     	b'Sec-WebSocket-Key: ' + key,
     	b'Sec-WebSocket-Version: 13',
     	b'',
