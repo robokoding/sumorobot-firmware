@@ -8,7 +8,7 @@ mac = ubinascii.hexlify(wlan.config("mac")[-3:]).decode("ascii")
 # Remote server
 url = "ws://ws.achex.ca:4010"
 # Local server
-#url = "ws://10.42.0.1:80/p2p/" + name + "/browser/"
+#url = "ws://192.168.2.1:80/p2p/sumo-%s/browser/" % mac
 
 # Code to execute
 ast = ""
