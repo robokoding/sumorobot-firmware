@@ -1,7 +1,7 @@
 import os
 import ujson
 from utime import sleep_us, sleep_ms
-from machine import Pin, PWM, ADC, time_pulse_us
+from machine import Pin, PWM, ADC, time_pulse_us, deepsleep
 
 # LEDs
 STATUS = 0
@@ -63,7 +63,7 @@ class Sumorobot(object):
 
         # For terminating sleep
         self.terminate = False
-        
+
         # For search mode
         self.search = False
         self.search_counter = 0
