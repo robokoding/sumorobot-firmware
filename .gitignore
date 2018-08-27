@@ -1,3 +1,5 @@
+# ignore backup files
+._*
 # ignore the ESP32 MicroPython binary
 esp32*.bin
 # ignore the development config file
