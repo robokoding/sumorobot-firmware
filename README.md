@@ -2,7 +2,7 @@
 
 The software that is running on the SumoRobots
 
-<img alt="Code" src="https://www.robokoding.com/assets/images/firmware.png" width="50%">
+<img alt="Code" src="https://www.robokoding.com/assets/img/sumorobot_firmware.png" width="50%">
 
 # Instructions
 * Change the SERIAL_PORT in the Makefile
