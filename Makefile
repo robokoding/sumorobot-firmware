@@ -1,6 +1,8 @@
-SERIAL_PORT=/dev/tty.SLAB_USBtoUART
-#SERIAL_PORT=/dev/tty.wchusbserial1410
+#!/bin/bash
+
 #SERIAL_PORT=/dev/ttyUSB0
+#SERIAL_PORT=/dev/tty.SLAB_USBtoUART
+SERIAL_PORT=/dev/tty.wchusbserial1410
 
 all: flash delay libs config update reset
 
