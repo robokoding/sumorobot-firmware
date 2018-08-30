@@ -32,7 +32,7 @@ class Sumorobot(object):
         self.pwm_right = PWM(Pin(4), freq=50, duty=0)
 
         # Bottom status LED
-        self.status_led = Pin(5, Pin.OUT)
+        self.status_led = Pin(self.config["status_led"], Pin.OUT)
         # Bottom status LED is in reverse polarity
         self.status_led.value(1)
         # Sensor LEDs
@@ -223,9 +223,9 @@ class Sumorobot(object):
                 self.search_counter = 0
             # When to search
             if self.search:
-                self.move(FORWARD, block_id)
+                self.move(FORWARD)
             else:
-                self.move(LEFT, block_id)
+                self.move(LEFT)
             # Increase search counter
             self.search_counter += 1
         elif dir == FORWARD:
