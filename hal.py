@@ -32,7 +32,7 @@ class Sumorobot(object):
         self.pwm_right = PWM(Pin(4), freq=50, duty=0)
 
         # Bottom status LED
-        self.status_led = Pin(self.config["status_led"], Pin.OUT)
+        self.status_led = Pin(self.config["status_led_pin"], Pin.OUT)
         # Bottom status LED is in reverse polarity
         self.status_led.value(1)
         # Sensor LEDs
@@ -98,7 +98,8 @@ class Sumorobot(object):
             if self.move_counter > 0:
                 self.move_counter -= 1
             if self.bat_status < bat - 0.20 and self.move_counter == 0:
-                deepsleep()
+                #deepsleep()
+                pass
             self.bat_status = bat
         else:
             self.move_counter = 10
@@ -116,7 +117,7 @@ class Sumorobot(object):
         return (time_pulse_us(self.echo, 1, 30000) / 2) / 29.1
 
     # Function to get boolean if there is something in front of the SumoRobot
-    def is_opponent(self, block_id = None):
+    def is_opponent(self):
         # Get the opponent distance
         self.opponent_distance = self.get_opponent_distance()
         # When the opponent is close and the ping actually returned
@@ -152,8 +153,8 @@ class Sumorobot(object):
 
     # Function to get light inensity from the phototransistors
     def get_line(self, dir):
-        # Check for valid direction
-        assert dir == LEFT or dir == RIGHT
+        # Check if the direction is valid
+        assert dir in (LEFT, RIGHT)
 
         # Return the given line sensor value
         if dir == LEFT:
@@ -161,9 +162,9 @@ class Sumorobot(object):
         elif dir == RIGHT:
             return self.adc_line_right.read()
 
-    def is_line(self, dir, block_id = None):
-        # Check for valid direction
-        assert dir == LEFT or dir == RIGHT
+    def is_line(self, dir):
+        # Check if the direction is valid
+        assert dir in (LEFT, RIGHT)
 
         # Return the given line sensor value
         if dir == LEFT:
@@ -176,9 +177,9 @@ class Sumorobot(object):
             return line
 
     def set_servo(self, dir, speed):
-        # Check for valid direction
-        assert dir == LEFT or dir == RIGHT
-        # Check for valid speed
+        # Check if the direction is valid
+        assert dir in (LEFT, RIGHT)
+        # Check if the speed is valid
         assert speed <= 100 and speed >= -100
 
         # When the speed didn't change
@@ -202,9 +203,9 @@ class Sumorobot(object):
                 # -100 ... 100 to 33 .. 102
                 self.pwm_right.duty(int(33 + self.config["right_servo_tuning"] + speed * 33 / 100))
 
-    def move(self, dir, block_id = None):
-        # Check for valid direction
-        assert dir == STOP or dir == RIGHT or dir == LEFT or dir == BACKWARD or dir == FORWARD
+    def move(self, dir):
+        # Check if the direction is valid
+        assert dir in (SEARCH, STOP, RIGHT, LEFT, BACKWARD, FORWARD)
 
         # Go to the given direction
         if dir == STOP:
@@ -221,11 +222,15 @@ class Sumorobot(object):
             if self.search_counter == 50:
                 self.search = not self.search
                 self.search_counter = 0
-            # When to search
+            # When in search mode
             if self.search:
-                self.move(FORWARD)
+                # Go forward
+                self.set_servo(LEFT, 100)
+                self.set_servo(RIGHT, -100)
             else:
-                self.move(LEFT)
+                # Go left
+                self.set_servo(LEFT, -100)
+                self.set_servo(RIGHT, -100)
             # Increase search counter
             self.search_counter += 1
         elif dir == FORWARD:
@@ -235,7 +240,7 @@ class Sumorobot(object):
             self.set_servo(LEFT, -100)
             self.set_servo(RIGHT, 100)
 
-    def sleep(self, delay, block_id = None):
+    def sleep(self, delay):
         # Check for valid delay
         assert delay > 0
 
