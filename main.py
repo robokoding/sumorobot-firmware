@@ -5,10 +5,8 @@ import uwebsockets
 # Extract a unique name for the robot from the device MAC address
 mac = ubinascii.hexlify(wlan.config("mac")[-3:]).decode("ascii")
 
-# Remote server
-url = "ws://ws.achex.ca:4010"
-# Local server
-#url = "ws://192.168.2.1:80/p2p/sumo-%s/browser/" % mac
+# SumoRobot server
+server_url = config["sumo_server"]
 
 # Code to execute
 ast = ""
