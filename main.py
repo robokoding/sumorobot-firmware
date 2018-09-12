@@ -98,7 +98,7 @@ while not wlan.isconnected():
     sleep_ms(100)
 
 # Connect to the websocket
-url = "ws://%s/p2p/sumo-%s/broswer" % (config['sumo_server'], config['sumo_id'])
+url = "ws://%s/p2p/sumo-%s/browser" % (config['sumo_server'], config['sumo_id'])
 conn = uwebsockets.connect(url)
 
 # Set X seconds timeout for socket reads
