@@ -8,7 +8,7 @@
 	"ultrasonic_distance": 40,
 	"left_line_threshold": 1000,
 	"right_line_threshold": 1000,
-	"sumo_server": "ws://ws.achex.ca:4010",
+	"sumo_server": "165.227.140.64:80",
 	"wifis": {
 		"RoboKoding": "salakala"
 	}
