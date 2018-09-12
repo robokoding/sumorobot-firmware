@@ -2,12 +2,6 @@ import _thread
 import ubinascii
 import uwebsockets
 
-# Extract a unique name for the robot from the device MAC address
-mac = ubinascii.hexlify(wlan.config("mac")[-3:]).decode("ascii")
-
-# SumoRobot server
-server_url = config["sumo_server"]
-
 # Code to execute
 ast = ""
 # Scope, info to be sent to the client
@@ -23,7 +17,6 @@ def step():
         sumorobot.is_line(RIGHT)
         # Update scope
         scope = dict(
-            to = "browser-%s@00000514" % mac,
             line_left = sumorobot.get_line(LEFT),
             line_right = sumorobot.get_line(RIGHT),
             opponent = sumorobot.get_opponent_distance(),
@@ -105,16 +98,11 @@ while not wlan.isconnected():
     sleep_ms(100)
 
 # Connect to the websocket
+url = config['sumo_server'] + "/p2p/" + config['sumo_id'] + "/broswer"
 conn = uwebsockets.connect(url)
 
 # Set X seconds timeout for socket reads
 conn.settimeout(1)
-
-# Send a ping to the robot
-conn.send('{"setID": "sumo-%s@00000514", "passwd": "salakala"}' % mac)
-# Receive session and auth ok frames
-conn.recv()
-conn.recv()
 
 # Stop bootup blinking
 timer.deinit()
