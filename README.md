@@ -13,7 +13,7 @@ The software that is running on the SumoRobots
 * Download [the MicroPython binary](http://micropython.org/download#esp32) to this directory
 * Upload the MicroPython binary and the SumoRobot firmware to your ESP32 (open a terminal and type: make all)
 
-# support
+# Support
 If you find our work useful, please consider donating : )  
 [![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/robokoding/donate)  
 
