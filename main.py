@@ -23,7 +23,10 @@ def step():
             battery_voltage = sumorobot.get_battery_voltage(),
         )
         # Execute code
-        exec(ast)
+        try:
+            exec(ast)
+        except:
+            pass
         # When robot was stopped
         if sumorobot.terminate:
             # Disable forceful termination of delays in code
@@ -78,7 +81,7 @@ def ws_handler():
         elif b'code' in data:
             data = ujson.loads(data)
             data['val'] = data['val'].replace(";;", "\n")
-            print("code:", data['val'])
+            #print("code:", data['val'])
             ast = compile(data['val'], "snippet", "exec")
         elif b'stop' in data:
             ast = ""
@@ -87,6 +90,7 @@ def ws_handler():
             sumorobot.terminate = True
         elif b'calibrate_line' in data:
             sumorobot.calibrate_line()
+            #print('calibrate')
         elif b'Gone' in data:
             print("server said 410 Gone, attempting to reconnect...")
             #conn = uwebsockets.connect(url)
@@ -98,8 +102,8 @@ while not wlan.isconnected():
     sleep_ms(100)
 
 # Connect to the websocket
-url = "ws://%s/p2p/sumo-%s/browser/" % (config['sumo_server'], config['sumo_id'])
-conn = uwebsockets.connect(url)
+uri = "ws://%s/p2p/sumo-%s/browser/" % (config['sumo_server'], config['sumo_id'])
+conn = uwebsockets.connect(uri)
 
 # Set X seconds timeout for socket reads
 conn.settimeout(1)
