@@ -50,6 +50,7 @@ class Sumorobot(object):
         Pin(23, Pin.IN, Pin.PULL_UP)
 
         # The phototransistors
+        self.last_line = LEFT
         self.adc_line_left = ADC(Pin(34))
         self.adc_line_right = ADC(Pin(33))
 
@@ -148,7 +149,7 @@ class Sumorobot(object):
         self.config["right_line_threshold"] = self.adc_line_right.read()
         # Update the config file
         with open("config.part", "w") as config_file:
-            config_file.write(ujson.dumps(config))
+            config_file.write(ujson.dumps(self.config))
         os.rename("config.part", "config.json")
 
     # Function to get light inensity from the phototransistors
@@ -170,10 +171,12 @@ class Sumorobot(object):
         if dir == LEFT:
             line = abs(self.get_line(LEFT) - self.config["left_line_threshold"]) > 1000
             self.set_led(LEFT_LINE, line)
+            last_line = LEFT
             return line
         elif dir == RIGHT:
             line = abs(self.get_line(RIGHT) - self.config["right_line_threshold"]) > 1000
             self.set_led(RIGHT_LINE, line)
+            last_line = RIGHT
             return line
 
     def set_servo(self, dir, speed):
@@ -227,10 +230,14 @@ class Sumorobot(object):
                 # Go forward
                 self.set_servo(LEFT, 100)
                 self.set_servo(RIGHT, -100)
-            else:
+            elif last_line == RIGHT:
                 # Go left
                 self.set_servo(LEFT, -100)
                 self.set_servo(RIGHT, -100)
+            else:
+                # Go right
+                self.set_servo(LEFT, 100)
+                self.set_servo(RIGHT, 100)
             # Increase search counter
             self.search_counter += 1
         elif dir == FORWARD:
