@@ -143,10 +143,20 @@ class Sumorobot(object):
         return opponent
 
     # Function to update line calibration and write it to the config file
-    def calibrate_line(self):
+    def calibrate_line_value(self):
         # Read the line sensor values
-        self.config["left_line_threshold"] = self.adc_line_left.read()
-        self.config["right_line_threshold"] = self.adc_line_right.read()
+        self.config["left_line_value"] = self.adc_line_left.read()
+        self.config["right_line_value"] = self.adc_line_right.read()
+        # Update the config file
+        with open("config.part", "w") as config_file:
+            config_file.write(ujson.dumps(self.config))
+        os.rename("config.part", "config.json")
+    
+    # Function to update line threshold calibration and write it to the config file
+    def calibrate_line_threshold(self, value):
+        # Read the line sensor values
+        self.config["left_line_threshold"] = value
+        self.config["right_line_threshold"] = value
         # Update the config file
         with open("config.part", "w") as config_file:
             config_file.write(ujson.dumps(self.config))
