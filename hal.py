@@ -169,12 +169,12 @@ class Sumorobot(object):
 
         # Return the given line sensor value
         if dir == LEFT:
-            line = abs(self.get_line(LEFT) - self.config["left_line_threshold"]) > 1000
+            line = abs(self.get_line(LEFT) - self.config["left_line_value"]) > self.config["left_line_threshold"]
             self.set_led(LEFT_LINE, line)
             last_line = LEFT
             return line
         elif dir == RIGHT:
-            line = abs(self.get_line(RIGHT) - self.config["right_line_threshold"]) > 1000
+            line = abs(self.get_line(RIGHT) - self.config["right_line_value"]) > self.config["right_line_threshold"]
             self.set_led(RIGHT_LINE, line)
             last_line = RIGHT
             return line
