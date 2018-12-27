@@ -92,7 +92,8 @@ def ws_handler():
             sumorobot.calibrate_line_value()
             #print('calibrate_line')
         elif b'calibrate_line_threshold' in data:
-            sumorobot.calibrate_line_threshold()
+            data = ujson.loads(data)
+            sumorobot.calibrate_line_threshold(int(data['val']))
             #print('calibrate_threshold')
         elif b'Gone' in data:
             print("server said 410 Gone, attempting to reconnect...")
