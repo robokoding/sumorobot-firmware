@@ -88,9 +88,12 @@ def ws_handler():
             sumorobot.move(STOP)
             # for terminating delays in code
             sumorobot.terminate = True
-        elif b'calibrate_line' in data:
-            sumorobot.calibrate_line()
-            #print('calibrate')
+        elif b'calibrate_line_value' in data:
+            sumorobot.calibrate_line_value()
+            #print('calibrate_line')
+        elif b'calibrate_line_threshold' in data:
+            sumorobot.calibrate_line_threshold()
+            #print('calibrate_threshold')
         elif b'Gone' in data:
             print("server said 410 Gone, attempting to reconnect...")
             #conn = uwebsockets.connect(url)
