@@ -6,6 +6,8 @@
 	"left_servo_tuning": 33,
 	"right_servo_tuning": 33,
 	"ultrasonic_distance": 40,
+	"left_line_value": 1000,
+	"right_line_value": 1000,
 	"left_line_threshold": 1000,
 	"right_line_threshold": 1000,
 	"sumo_server": "165.227.140.64:80",
