@@ -81,7 +81,7 @@ def ws_handler():
         elif b'code' in data:
             data = ujson.loads(data)
             data['val'] = data['val'].replace(";;", "\n")
-            #print("code:", data['val'])
+            #print("main.py code=", data['val'])
             ast = compile(data['val'], "snippet", "exec")
         elif b'stop' in data:
             ast = ""
@@ -90,12 +90,22 @@ def ws_handler():
             sumorobot.terminate = True
         elif b'calibrate_line' in data:
             sumorobot.calibrate_line()
-            #print('calibrate')
+            #print('main.py: calibrate_line')
         elif b'Gone' in data:
-            print("server said 410 Gone, attempting to reconnect...")
+            print("main.py: server said 410 Gone, attempting to reconnect...")
             #conn = uwebsockets.connect(url)
         else:
-            print("unknown cmd:", data)
+            print("main.py: unknown cmd=", data)
+
+# Try to load the user code
+try:
+    with open("code.py", "r") as code:
+        ast = compile(code.read(), "snippet", "exec")
+except:
+    print("main.py: error loading code.py file")
+
+# Start the code processing thread
+_thread.start_new_thread(step, ())
 
 # Wait for WiFi to get connected
 while not wlan.isconnected():
@@ -116,7 +126,5 @@ has_wifi_connection = True
 # Indicate that the WebSocket is connected
 sumorobot.set_led(STATUS, True)
 
-# Start the code processing thread
-_thread.start_new_thread(step, ())
 # Start the Websocket processing thread
 _thread.start_new_thread(ws_handler, ())
