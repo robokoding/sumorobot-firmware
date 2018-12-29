@@ -1,5 +1,7 @@
 # ignore backup files
 ._*
+* Mac OS stuff
+.DS_Store
 # ignore the ESP32 MicroPython binary
 esp32*.bin
 # ignore the development config file
