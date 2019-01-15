@@ -19,4 +19,5 @@ If you find our work useful, please consider donating : )
 
 
 # Credits
+* Lauri Võsandi
 * [K-SPACE MTÜ](https://k-space.ee/)
