@@ -17,10 +17,14 @@ def step():
         sumorobot.is_line(RIGHT)
         # Update scope
         scope = dict(
-            line_left = sumorobot.get_line(LEFT),
-            line_right = sumorobot.get_line(RIGHT),
+            left_line = sumorobot.get_line(LEFT),
+            right_line = sumorobot.get_line(RIGHT),
             opponent = sumorobot.get_opponent_distance(),
             battery_voltage = sumorobot.get_battery_voltage(),
+            left_line_value = sumorobot.config["left_line_value"],
+            right_line_value = sumorobot.config["right_line_value"],
+            left_line_threshold = sumorobot.config["left_line_threshold"],
+            right_line_threshold = sumorobot.config["right_line_threshold"]
         )
         # Execute code
         try:
