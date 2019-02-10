@@ -31,6 +31,8 @@ class Sumorobot(object):
         self.pwm_left = PWM(Pin(15), freq=50, duty=0)
         self.pwm_right = PWM(Pin(4), freq=50, duty=0)
 
+        # LED sensor feedback
+        self.sensor_feedback = True
         # Bottom status LED
         self.status_led = Pin(self.config["status_led_pin"], Pin.OUT)
         # Bottom status LED is in reverse polarity
@@ -39,6 +41,17 @@ class Sumorobot(object):
         self.opponent_led = Pin(16, Pin.OUT)
         self.left_line_led = Pin(17, Pin.OUT)
         self.right_line_led = Pin(12, Pin.OUT)
+
+        # Scope with sensor data
+        self.sensor_scope = dict()
+
+        # WiFi connection
+        self.is_wifi_connected = False
+
+        # Python and Blockly code
+        self.python_code = ""
+        self.blockly_code = ""
+        self.compiled_python_code = ""
 
         # Battery gauge
         self.bat_status = 4.3
@@ -151,9 +164,9 @@ class Sumorobot(object):
         with open("config.part", "w") as config_file:
             config_file.write(ujson.dumps(self.config))
         os.rename("config.part", "config.json")
-    
+
     # Function to update line threshold calibration and write it to the config file
-    def calibrate_line_threshold(self, value):
+    def set_line_threshold(self, value):
         # Read the line sensor values
         self.config["left_line_threshold"] = value
         self.config["right_line_threshold"] = value
@@ -256,6 +269,47 @@ class Sumorobot(object):
         elif dir == BACKWARD:
             self.set_servo(LEFT, -100)
             self.set_servo(RIGHT, 100)
+
+    def update_sensor_feedback(self):
+        if self.sensor_feedback:
+            # Execute to see LED feedback for sensors
+            self.is_opponent()
+            self.is_line(LEFT)
+            self.is_line(RIGHT)
+
+    def update_sensor_scope(self):
+        self.sensor_scope = dict(
+            left_line = self.get_line(LEFT),
+            right_line = self.get_line(RIGHT),
+            opponent = self.get_opponent_distance(),
+            battery_voltage = self.get_battery_voltage()
+        )
+
+    def get_python_code(self):
+        return dict(
+            type = "python_code",
+            val = self.python_code
+        )
+
+    def get_blockly_code(self):
+        return dict(
+            type = "blockly_code",
+            val = self.blockly_code
+        )
+
+    def get_sensor_scope(self):
+        temp = self.sensor_scope
+        temp['type'] = "sensor_scope"
+        return temp
+
+    def get_line_scope(self):
+        return dict(
+            type = "line_scope",
+            left_line_value = self.config["left_line_value"],
+            right_line_value = self.config["right_line_value"],
+            left_line_threshold = self.config["left_line_threshold"],
+            right_line_threshold = self.config["right_line_threshold"]
+        )
 
     def sleep(self, delay):
         # Check for valid delay

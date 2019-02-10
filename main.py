@@ -2,33 +2,15 @@ import _thread
 import ubinascii
 import uwebsockets
 
-# Code to execute
-ast = ""
-# Scope, info to be sent to the client
-scope = dict()
-
 def step():
-    global scope
-
     while True:
         # Execute to see LED feedback for sensors
-        sumorobot.is_opponent()
-        sumorobot.is_line(LEFT)
-        sumorobot.is_line(RIGHT)
-        # Update scope
-        scope = dict(
-            left_line = sumorobot.get_line(LEFT),
-            right_line = sumorobot.get_line(RIGHT),
-            opponent = sumorobot.get_opponent_distance(),
-            battery_voltage = sumorobot.get_battery_voltage(),
-            left_line_value = sumorobot.config["left_line_value"],
-            right_line_value = sumorobot.config["right_line_value"],
-            left_line_threshold = sumorobot.config["left_line_threshold"],
-            right_line_threshold = sumorobot.config["right_line_threshold"]
-        )
-        # Execute code
+        sumorobot.update_sensor_feedback()
+        # Update sensor scope
+        sumorobot.update_sensor_scope()
+        # Try to execute the Python code
         try:
-            exec(ast)
+            exec(sumorobot.compiled_python_code)
         except:
             pass
         # When robot was stopped
@@ -41,19 +23,16 @@ def step():
         sleep_ms(50)
 
 def ws_handler():
-    global ast
-    global has_wifi_connection
-
     while True:
         # When WiFi has just been reconnected
-        if wlan.isconnected() and not has_wifi_connection:
+        if wlan.isconnected() and not sumorobot.is_wifi_connected:
             #conn = uwebsockets.connect(url)
             sumorobot.set_led(STATUS, True)
-            has_wifi_connection = True
+            sumorobot.is_wifi_connected = True
         # When WiFi has just been disconnected
-        elif not wlan.isconnected() and has_wifi_connection:
+        elif not wlan.isconnected() and sumorobot.is_wifi_connected:
             sumorobot.set_led(STATUS, False)
-            has_wifi_connection = False
+            sumorobot.is_wifi_connected = False
         elif not wlan.isconnected():
             # Continue to wait for a WiFi connection
             continue
@@ -69,36 +48,50 @@ def ws_handler():
             # Continue to receive data
             continue
         elif b'forward' in data:
-            ast = ""
+            sumorobot.compiled_python_code = ""
             sumorobot.move(FORWARD)
         elif b'backward' in data:
-            ast = ""
+            sumorobot.compiled_python_code = ""
             sumorobot.move(BACKWARD)
         elif b'right' in data:
-            ast = ""
+            sumorobot.compiled_python_code = ""
             sumorobot.move(RIGHT)
         elif b'left' in data:
-            ast = ""
+            sumorobot.compiled_python_code = ""
             sumorobot.move(LEFT)
-        elif b'ping' in data:
-            conn.send(repr(scope).replace("'", '"'))
-        elif b'code' in data:
-            data = ujson.loads(data)
-            data['val'] = data['val'].replace(";;", "\n")
-            #print("main.py code=", data['val'])
-            ast = compile(data['val'], "snippet", "exec")
         elif b'stop' in data:
-            ast = ""
+            sumorobot.compiled_python_code = ""
             sumorobot.move(STOP)
             # for terminating delays in code
             sumorobot.terminate = True
+        elif b'get_line_scope' in data:
+            conn.send(ujson.dumps(sumorobot.get_line_scope()))
+        elif b'get_sensor_scope' in data:
+            conn.send(ujson.dumps(sumorobot.get_sensor_scope()))
+        elif b'get_python_code' in data:
+            print(sumorobot.get_python_code())
+            conn.send(ujson.dumps(sumorobot.get_python_code()))
+        elif b'get_blockly_code' in data:
+            print(sumorobot.get_blockly_code())
+            conn.send(ujson.dumps(sumorobot.get_blockly_code()))
+        elif b'set_blockly_code' in data:
+            data = ujson.loads(data)
+            print(data)
+            sumorobot.blockly_code = data['val']
+        elif b'set_python_code' in data:
+            data = ujson.loads(data)
+            print(data)
+            sumorobot.python_code = data['val']
+            data['val'] = data['val'].replace(";;", "\n")
+            #print("main.py code=", data['val'])
+            sumorobot.compiled_python_code = compile(data['val'], "snippet", "exec")
         elif b'calibrate_line_value' in data:
             sumorobot.calibrate_line_value()
             #print('main.py: calibrate_line_value')
-        elif b'calibrate_line_threshold' in data:
+        elif b'set_line_threshold' in data:
             data = ujson.loads(data)
-            sumorobot.calibrate_line_threshold(int(data['val']))
-            #print('main.py: calibrate_line_threshold')
+            sumorobot.set_line_threshold(int(data['val']))
+            #print('main.py: set_line_threshold')
         elif b'Gone' in data:
             print("main.py: server said 410 Gone, attempting to reconnect...")
             #conn = uwebsockets.connect(url)
@@ -108,7 +101,9 @@ def ws_handler():
 # Try to load the user code
 try:
     with open("code.py", "r") as code:
-        ast = compile(code.read(), "snippet", "exec")
+        temp = code.read()
+        sumorobot.python_code = temp
+        sumorobot.compiled_python_code = compile(temp, "snippet", "exec")
 except:
     print("main.py: error loading code.py file")
 
@@ -130,7 +125,7 @@ conn.settimeout(1)
 timer.deinit()
 
 # WiFi is connected
-has_wifi_connection = True
+sumorobot.is_wifi_connected = True
 # Indicate that the WebSocket is connected
 sumorobot.set_led(STATUS, True)
 
