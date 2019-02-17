@@ -69,21 +69,23 @@ def ws_handler():
         elif b'get_sensor_scope' in data:
             conn.send(ujson.dumps(sumorobot.get_sensor_scope()))
         elif b'get_python_code' in data:
-            print(sumorobot.get_python_code())
+            #print("main.py sending python code=", sumorobot.get_python_code())
             conn.send(ujson.dumps(sumorobot.get_python_code()))
         elif b'get_blockly_code' in data:
-            print(sumorobot.get_blockly_code())
+            #print("main.py sending blockly code=", sumorobot.get_blockly_code())
             conn.send(ujson.dumps(sumorobot.get_blockly_code()))
+        elif b'toggle_sensor_feedback' in data:
+            data = ujson.loads(data)
+            sumorobot.sensor_feedback = not sumorobot.sensor_feedback
         elif b'set_blockly_code' in data:
             data = ujson.loads(data)
-            print(data)
+            #print("main.py Blockly code=", data['val'])
             sumorobot.blockly_code = data['val']
         elif b'set_python_code' in data:
             data = ujson.loads(data)
-            print(data)
             sumorobot.python_code = data['val']
             data['val'] = data['val'].replace(";;", "\n")
-            #print("main.py code=", data['val'])
+            #print("main.py python code=", data['val'])
             sumorobot.compiled_python_code = compile(data['val'], "snippet", "exec")
         elif b'calibrate_line_value' in data:
             sumorobot.calibrate_line_value()
