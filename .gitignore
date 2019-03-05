@@ -1,3 +1,5 @@
+# ignore code file
+code.py
 # ignore backup files
 ._*
 * Mac OS stuff
