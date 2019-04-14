@@ -128,7 +128,7 @@ class Sumorobot(object):
         sleep_us(10)
         self.trigger.value(0)
         # Wait for the pulse and calculate the distance
-        return (time_pulse_us(self.echo, 1, 30000) / 2) / 29.1
+        return round((time_pulse_us(self.echo, 1, 30000) / 2) / 29.1, 2)
 
     # Function to get boolean if there is something in front of the SumoRobot
     def is_opponent(self):
