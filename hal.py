@@ -57,6 +57,7 @@ class Sumorobot(object):
         self.bat_status = 4.3
         self.move_counter = 0
         self.adc_battery = ADC(Pin(32))
+        self.bat_charge = Pin(25, Pin.IN)
 
         # The pullups for the phototransistors
         Pin(19, Pin.IN, Pin.PULL_UP)
@@ -282,6 +283,7 @@ class Sumorobot(object):
             left_line = self.get_line(LEFT),
             right_line = self.get_line(RIGHT),
             opponent = self.get_opponent_distance(),
+            battery_charge = self.bat_charge.value(),
             battery_voltage = self.get_battery_voltage()
         )
 
