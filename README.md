@@ -19,5 +19,5 @@ If you find our work useful, please consider donating : )
 
 
 # Credits
-* Lauri Võsandi
+* [Lauri Võsandi](https://lauri.xn--vsandi-pxa.com/)
 * [K-SPACE MTÜ](https://k-space.ee/)
