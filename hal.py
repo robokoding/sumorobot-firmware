@@ -1,7 +1,7 @@
 import os
 import ujson
 from utime import sleep_us, sleep_ms
-from machine import Pin, PWM, ADC, time_pulse_us, deepsleep
+from machine import Pin, PWM, ADC, time_pulse_us
 
 # LEDs
 STATUS = 0

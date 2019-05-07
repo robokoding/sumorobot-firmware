@@ -236,6 +236,7 @@ def connect(uri):
     # We don't (currently) need these headers
     # FIXME: should we check the return key?
     while header:
+        print("uwebsockets.py header:", header)
         header = sock.readline()[:-2]
 
     return WebsocketClient(sock)
