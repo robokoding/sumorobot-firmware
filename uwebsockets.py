@@ -204,6 +204,7 @@ def connect(uri):
 
     # Connect the socket
     sock = socket.socket()
+    sock.settimeout(1)
     addr = socket.getaddrinfo(uri.hostname, uri.port)
     sock.connect(addr[0][4])
 
