@@ -136,7 +136,7 @@ class Sumorobot(object):
         # Get the opponent distance
         self.opponent_distance = self.get_opponent_distance()
         # When the opponent is close and the ping actually returned
-        if self.opponent_distance < self.config["ultrasonic_distance"] and self.opponent_distance > 0:
+        if self.opponent_distance < self.config["ultrasonic_threshold"] and self.opponent_distance > 0:
             # When not maximum score
             if self.opponent_score < 5:
                 # Increase the opponent score
@@ -156,25 +156,35 @@ class Sumorobot(object):
 
         return opponent
 
+    # Function to update the config file
+    def update_config_file(self):
+        # Update the config file
+        with open("config.part", "w") as config_file:
+            config_file.write(ujson.dumps(self.config))
+        os.rename("config.part", "config.json")
+
     # Function to update line calibration and write it to the config file
     def calibrate_line_value(self):
         # Read the line sensor values
         self.config["left_line_value"] = self.adc_line_left.read()
         self.config["right_line_value"] = self.adc_line_right.read()
         # Update the config file
-        with open("config.part", "w") as config_file:
-            config_file.write(ujson.dumps(self.config))
-        os.rename("config.part", "config.json")
+        self.update_config_file()
 
-    # Function to update line threshold calibration and write it to the config file
+    # Function to update line threshold and write it to the config file
     def set_line_threshold(self, value):
         # Read the line sensor values
         self.config["left_line_threshold"] = value
         self.config["right_line_threshold"] = value
         # Update the config file
-        with open("config.part", "w") as config_file:
-            config_file.write(ujson.dumps(self.config))
-        os.rename("config.part", "config.json")
+        self.update_config_file()
+
+    # Function to update ultrasonic sensor threshold  and write it to the config file
+    def set_ultrasonic_threshold(self, value):
+        # Read the line sensor values
+        self.config["ultrasonic_threshold"] = value
+        # Update the config file
+        self.update_config_file()
 
     # Function to get light inensity from the phototransistors
     def get_line(self, dir):
@@ -299,18 +309,25 @@ class Sumorobot(object):
             val = self.blockly_code
         )
 
+    def get_firmware_version(self):
+        return dict(
+            type = "firmware_version",
+            val = self.config["firmware_version"]
+        )
+
     def get_sensor_scope(self):
         temp = self.sensor_scope
         temp['type'] = "sensor_scope"
         return temp
 
-    def get_line_scope(self):
+    def get_threshold_scope(self):
         return dict(
-            type = "line_scope",
+            type = "threshold_scope",
             left_line_value = self.config["left_line_value"],
             right_line_value = self.config["right_line_value"],
             left_line_threshold = self.config["left_line_threshold"],
-            right_line_threshold = self.config["right_line_threshold"]
+            right_line_threshold = self.config["right_line_threshold"],
+            ultrasonic_threshold = self.config["ultrasonic_threshold"]
         )
 
     def sleep(self, delay):

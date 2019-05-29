@@ -82,8 +82,8 @@ def ws_handler():
             sumorobot.move(STOP)
             # for terminating delays in code
             sumorobot.terminate = True
-        elif b'get_line_scope' in data:
-            conn.send(ujson.dumps(sumorobot.get_line_scope()))
+        elif b'get_threshold_scope' in data:
+            conn.send(ujson.dumps(sumorobot.get_threshold_scope()))
         elif b'get_sensor_scope' in data:
             conn.send(ujson.dumps(sumorobot.get_sensor_scope()))
         elif b'get_python_code' in data:
@@ -92,6 +92,9 @@ def ws_handler():
         elif b'get_blockly_code' in data:
             #print("main.py sending blockly code=", sumorobot.get_blockly_code())
             conn.send(ujson.dumps(sumorobot.get_blockly_code()))
+        elif b'get_firmware_version' in data:
+            #print("main.py get_firmware_version")
+            conn.send(ujson.dumps(sumorobot.get_firmware_version()))
         elif b'toggle_sensor_feedback' in data:
             data = ujson.loads(data)
             sumorobot.sensor_feedback = not sumorobot.sensor_feedback
@@ -107,11 +110,15 @@ def ws_handler():
             sumorobot.compiled_python_code = compile(data['val'], "snippet", "exec")
         elif b'calibrate_line_value' in data:
             sumorobot.calibrate_line_value()
-            #print('main.py: calibrate_line_value')
+            #print("main.py: calibrate_line_value")
         elif b'set_line_threshold' in data:
             data = ujson.loads(data)
             sumorobot.set_line_threshold(int(data['val']))
-            #print('main.py: set_line_threshold')
+            #print("main.py: set_line_threshold")
+        elif b'set_ultrasonic_threshold' in data:
+            data = ujson.loads(data)
+            sumorobot.set_ultrasonic_threshold(int(data['val']))
+            #print("main.py: set_ultrasonic_threshold")
         elif b'Gone' in data:
             print("main.py: server said 410 Gone, attempting to reconnect...")
             #conn = uwebsockets.connect(url)
