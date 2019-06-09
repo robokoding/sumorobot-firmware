@@ -1,12 +1,12 @@
 """
 Websockets client for micropython
 
-Based very heavily on
+Based very heavily off
 https://github.com/aaugustin/websockets/blob/master/websockets/client.py
 """
 
-#import usocket as socket
-import os
+#import libraries
+import ussl
 import ure as re
 import urandom as random
 import ustruct as struct
@@ -33,21 +33,44 @@ CLOSE_TOO_BIG = const(1009)
 CLOSE_MISSING_EXTN = const(1010)
 CLOSE_BAD_CONDITION = const(1011)
 
-URL_RE = re.compile(r'ws://([A-Za-z0-9\-\.]+)(?:\:([0-9]+))?(/.+)?')
-URI = namedtuple('URI', ('hostname', 'port', 'path'))
+URL_RE = re.compile(r'(wss|ws)://([A-Za-z0-9-\.]+)(?:\:([0-9]+))?(/.+)?')
+URI = namedtuple('URI', ('protocol', 'hostname', 'port', 'path'))
+
+class NoDataException(Exception):
+    pass
 
 def urlparse(uri):
+    """Parse ws:// URLs"""
     match = URL_RE.match(uri)
     if match:
-        return URI(match.group(1), int(match.group(2)), match.group(3))
-    else:
-        raise ValueError("Invalid URL: %s" % uri)
+        protocol = match.group(1)
+        host = match.group(2)
+        port = match.group(3)
+        path = match.group(4)
+
+        if protocol == 'wss':
+            if port is None:
+                port = 443
+        elif protocol == 'ws':
+            if port is None:
+                port = 80
+        else:
+            raise ValueError('Scheme {} is invalid'.format(protocol))
+
+        return URI(protocol, host, int(port), path)
+
 
 class Websocket:
+    """
+    Basis of the Websocket protocol.
+
+    This can probably be replaced with the C-based websocket module, but
+    this one currently supports more options.
+    """
     is_client = False
 
     def __init__(self, sock):
-        self._sock = sock
+        self.sock = sock
         self.open = True
 
     def __enter__(self):
@@ -57,11 +80,21 @@ class Websocket:
         self.close()
 
     def settimeout(self, timeout):
-        self._sock.settimeout(timeout)
+        self.sock.settimeout(timeout)
 
     def read_frame(self, max_size=None):
+        """
+        Read a frame from the socket.
+        See https://tools.ietf.org/html/rfc6455#section-5.2 for the details.
+        """
+
         # Frame header
-        byte1, byte2 = struct.unpack('!BB', self._sock.read(2))
+        two_bytes = self.sock.read(2)
+
+        if not two_bytes:
+            raise NoDataException
+
+        byte1, byte2 = struct.unpack('!BB', two_bytes)
 
         # Byte 1: FIN(1) _(1) _(1) _(1) OPCODE(4)
         fin = bool(byte1 & 0x80)
@@ -72,15 +105,15 @@ class Websocket:
         length = byte2 & 0x7f
 
         if length == 126:  # Magic number, length header is 2 bytes
-            length, = struct.unpack('!H', self._sock.read(2))
+            length, = struct.unpack('!H', self.sock.read(2))
         elif length == 127:  # Magic number, length header is 8 bytes
-            length, = struct.unpack('!Q', self._sock.read(8))
+            length, = struct.unpack('!Q', self.sock.read(8))
 
         if mask:  # Mask is 4 bytes
-            mask_bits = self._sock.read(4)
+            mask_bits = self.sock.read(4)
 
         try:
-            data = self._sock.read(length)
+            data = self.sock.read(length)
         except MemoryError:
             # We can't receive this many bytes, close the socket
             self.close(code=CLOSE_TOO_BIG)
@@ -93,6 +126,10 @@ class Websocket:
         return fin, opcode, data
 
     def write_frame(self, opcode, data=b''):
+        """
+        Write a frame to the socket.
+        See https://tools.ietf.org/html/rfc6455#section-5.2 for the details.
+        """
         fin = True
         mask = self.is_client  # messages sent by client are masked
 
@@ -108,34 +145,44 @@ class Websocket:
 
         if length < 126:  # 126 is magic value to use 2-byte length header
             byte2 |= length
-            self._sock.write(struct.pack('!BB', byte1, byte2))
+            self.sock.write(struct.pack('!BB', byte1, byte2))
 
         elif length < (1 << 16):  # Length fits in 2-bytes
             byte2 |= 126  # Magic code
-            self._sock.write(struct.pack('!BBH', byte1, byte2, length))
+            self.sock.write(struct.pack('!BBH', byte1, byte2, length))
 
         elif length < (1 << 64):
             byte2 |= 127  # Magic code
-            self._sock.write(struct.pack('!BBQ', byte1, byte2, length))
+            self.sock.write(struct.pack('!BBQ', byte1, byte2, length))
 
         else:
             raise ValueError()
 
         if mask:  # Mask is 4 bytes
             mask_bits = struct.pack('!I', random.getrandbits(32))
-            self._sock.write(mask_bits)
+            self.sock.write(mask_bits)
 
             data = bytes(b ^ mask_bits[i % 4]
                          for i, b in enumerate(data))
 
-        self._sock.write(data)
+        self.sock.write(data)
 
     def recv(self):
+        """
+        Receive data from the websocket.
+
+        This is slightly different from 'websockets' in that it doesn't
+        fire off a routine to process frames and put the data in a queue.
+        If you don't call recv() sufficiently often you won't process control
+        frames.
+        """
         assert self.open
 
         while self.open:
             try:
                 fin, opcode, data = self.read_frame()
+            except NoDataException:
+                return ''
             except ValueError:
                 self._close()
                 return
@@ -165,6 +212,8 @@ class Websocket:
                 raise ValueError(opcode)
 
     def send(self, buf):
+        """Send data to the websocket."""
+
         assert self.open
 
         if isinstance(buf, str):
@@ -178,6 +227,7 @@ class Websocket:
         self.write_frame(opcode, buf)
 
     def close(self, code=CLOSE_OK, reason=''):
+        """Close the websocket."""
         if not self.open:
             return
 
@@ -188,7 +238,7 @@ class Websocket:
 
     def _close(self):
         self.open = False
-        self._sock.close()
+        self.sock.close()
 
 class WebsocketClient(Websocket):
     is_client = True
@@ -198,41 +248,33 @@ def connect(uri):
     Connect a websocket.
     """
 
-    # Parse the given WebSocket URI
     uri = urlparse(uri)
     assert uri
 
-    # Connect the socket
     sock = socket.socket()
-    sock.settimeout(1)
     addr = socket.getaddrinfo(uri.hostname, uri.port)
     sock.connect(addr[0][4])
+    if uri.protocol == 'wss':
+        sock = ussl.wrap_socket(sock)
+
+    def send_header(header, *args):
+        sock.write(header % args + '\r\n')
 
     # Sec-WebSocket-Key is 16 bytes of random base64 encoded
-    key = binascii.b2a_base64(os.urandom(16))[:-1]
+    key = binascii.b2a_base64(bytes(random.getrandbits(8)
+                                    for _ in range(16)))[:-1]
 
-    # WebSocket initiation headers
-    headers = [
-    	b'GET %s HTTP/1.1' % uri.path or '/',
-    	b'Upgrade: websocket',
-    	b'Connection: Upgrade',
-    	b'Host: %s:%s' % (uri.hostname, uri.port),
-    	b'Origin: http://%s:%s' % (uri.hostname, uri.port),
-    	b'Sec-WebSocket-Key: ' + key,
-    	b'Sec-WebSocket-Version: 13',
-    	b'',
-    	b''
-    ]
+    send_header(b'GET %s HTTP/1.1', uri.path or '/')
+    send_header(b'Host: %s:%s', uri.hostname, uri.port)
+    send_header(b'Connection: Upgrade')
+    send_header(b'Upgrade: websocket')
+    send_header(b'Sec-WebSocket-Key: %s', key)
+    send_header(b'Sec-WebSocket-Version: 13')
+    send_header(b'Origin: http://localhost')
+    send_header(b'')
 
-    # Concatenate the headers and add new lines
-    data = b'\r\n'.join(headers)
-
-    # Send the WebSocket initiation packet
-    sock.send(data)
-
-    # Check for the WebSocket response header
     header = sock.readline()[:-2]
-    assert header == b'HTTP/1.1 101 Switching Protocols', header
+    assert header.startswith(b'HTTP/1.1 101 '), header
 
     # We don't (currently) need these headers
     # FIXME: should we check the return key?
