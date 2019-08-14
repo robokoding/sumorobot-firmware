@@ -5,9 +5,9 @@ The software that is running on the SumoRobots
 # Instructions
 * Change the SERIAL_PORT in the Makefile
 * Install [Python](https://www.python.org/downloads/)
-* Install [esptool](https://github.com/espressif/esptool) (to flash MicroPython to the ESP32)
+* Install [esptool](https://github.com/espressif/esptool) (to flash SumoFirmware to the SumoRobot)
 * Download the [SumoFirmware](https://github.com/robokoding/sumorobot-firmware/releases) to this directory
-* Upload the SumoFirmware to your ESP32 (open a terminal and type: make all)
+* Upload the SumoFirmware to your SumoRobot (open a terminal and type: make all)
 
 # Support
 If you find our work useful, please consider donating : )  
