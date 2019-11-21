@@ -5,7 +5,7 @@ from machine import Pin, PWM, ADC, time_pulse_us
 
 # LEDs
 STATUS = 0
-OPPONENT = 1
+SONAR = 1
 LEFT_LINE = 2
 RIGHT_LINE = 3
 
@@ -23,13 +23,15 @@ class Sumorobot(object):
         # Config file
         self.config = config
 
-        # Ultrasonic distance sensor
+        # Sonar distance sensor
         self.echo = Pin(14, Pin.IN)
         self.trigger = Pin(27, Pin.OUT)
 
         # Servo PWM-s
-        self.pwm_left = PWM(Pin(15), freq=50, duty=0)
-        self.pwm_right = PWM(Pin(4), freq=50, duty=0)
+        self.pwm = {
+            LEFT: PWM(Pin(15), freq=50, duty=0),
+            RIGHT: PWM(Pin(4), freq=50, duty=0)
+        }
 
         # LED sensor feedback
         self.sensor_feedback = True
@@ -38,20 +40,12 @@ class Sumorobot(object):
         # Bottom status LED is in reverse polarity
         self.status_led.value(1)
         # Sensor LEDs
-        self.opponent_led = Pin(16, Pin.OUT)
+        self.sonar_led = Pin(16, Pin.OUT)
         self.left_line_led = Pin(17, Pin.OUT)
         self.right_line_led = Pin(12, Pin.OUT)
 
-        # Scope with sensor data
-        self.sensor_scope = dict()
-
-        # WiFi connection
-        self.is_wifi_connected = False
-
-        # Python and Blockly code
-        self.python_code = ""
-        self.blockly_code = ""
-        self.compiled_python_code = ""
+        # Battery level in %
+        self.battery_level = 0
 
         # Battery gauge
         self.bat_status = 4.3
@@ -73,8 +67,8 @@ class Sumorobot(object):
         self.adc_line_left.atten(ADC.ATTN_11DB)
         self.adc_line_right.atten(ADC.ATTN_11DB)
 
-        # To smooth out ultrasonic sensor value
-        self.opponent_score = 0
+        # To smooth out sonar sensor value
+        self.sonar_score = 0
 
         # For terminating sleep
         self.terminate = False
@@ -87,41 +81,35 @@ class Sumorobot(object):
         self.prev_speed = {LEFT: 0, RIGHT: 0}
 
     # Function to set LED states
-    def set_led(self, led, state):
-        # Set the given LED state
+    def set_led(self, led, value):
+        # Turn the given LED on or off
         if led == STATUS:
             # Status LED is reverse polarity
-            self.status_led.value(0 if state else 1)
-        elif led == OPPONENT:
-            self.opponent_led.value(state)
+            self.status_led.value(0 if value else 1)
+        elif led == SONAR:
+            self.sonar_led.value(value)
         elif led == LEFT_LINE:
-            self.left_line_led.value(state)
+            self.left_line_led.value(value)
         elif led == RIGHT_LINE:
-            self.right_line_led.value(state)
-
-    # Function to shortly bink status LED
-    def toggle_led(self, timer = None):
-        self.status_led.value(0)
-        sleep_ms(10)
-        self.status_led.value(1)
+            self.right_line_led.value(value)
 
     # Function to get battery voltage
-    def get_battery_voltage(self):
-        bat = round(self.config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
+    def get_battery_level(self):
         # When the SumoRobot is not moving
         if self.prev_speed[LEFT] == 0 and self.prev_speed[RIGHT] == 0:
-            if self.move_counter > 0:
-                self.move_counter -= 1
-            if self.bat_status < bat - 0.20 and self.move_counter == 0:
-                #deepsleep()
-                pass
-            self.bat_status = bat
-        else:
-            self.move_counter = 10
-        return bat
+            # Calculate battery voltage
+            battery_voltage = round(self.config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
+            # Calculate battery percentage
+            temp_battery_level = 0.0 + ((100.0 - 0.0) / (4.2 - 3.2)) * (battery_voltage - 3.2)
+            # When battery level changed more than 3 percent
+            if abs(self.battery_level - temp_battery_level) > 3:
+                # Update battery level
+                self.battery_level = temp_battery_level
+        # Return the battery level in percentage
+        return self.battery_level
 
     # Function to get distance (cm) from the object in front of the SumoRobot
-    def get_opponent_distance(self):
+    def get_sonar_value(self):
         # Send a pulse
         self.trigger.value(0)
         sleep_us(5)
@@ -132,29 +120,29 @@ class Sumorobot(object):
         return round((time_pulse_us(self.echo, 1, 30000) / 2) / 29.1, 2)
 
     # Function to get boolean if there is something in front of the SumoRobot
-    def is_opponent(self):
-        # Get the opponent distance
-        self.opponent_distance = self.get_opponent_distance()
-        # When the opponent is close and the ping actually returned
-        if self.opponent_distance < self.config["ultrasonic_threshold"] and self.opponent_distance > 0:
+    def is_sonar(self):
+        # Get the sonar value
+        self.sonar_value = self.get_sonar_value()
+        # When the sonar value is small and the ping actually returned
+        if self.sonar_value < self.config["sonar_threshold"] and self.sonar_value > 0:
             # When not maximum score
-            if self.opponent_score < 5:
-                # Increase the opponent score
-                self.opponent_score += 1
-        # When no opponent was detected
+            if self.sonar_score < 5:
+                # Increase the sonar score
+                self.sonar_score += 1
+        # When no sonar ping was returned
         else:
             # When not lowest score
-            if self.opponent_score > 0:
-                # Decrease the opponent score
-                self.opponent_score -= 1
+            if self.sonar_score > 0:
+                # Decrease the sonar score
+                self.sonar_score -= 1
 
         # When the sensor saw something more than 2 times
-        opponent = True if self.opponent_score > 2 else False
+        value = True if self.sonar_score > 2 else False
 
-        # Trigger opponent LED
-        self.set_led(OPPONENT, opponent)
+        # Trigger sonar LED
+        self.set_led(SONAR, value)
 
-        return opponent
+        return value
 
     # Function to update the config file
     def update_config_file(self):
@@ -164,81 +152,62 @@ class Sumorobot(object):
         os.rename("config.part", "config.json")
 
     # Function to update line calibration and write it to the config file
-    def calibrate_line_value(self):
+    def calibrate_line_values(self):
         # Read the line sensor values
         self.config["left_line_value"] = self.adc_line_left.read()
         self.config["right_line_value"] = self.adc_line_right.read()
-        # Update the config file
-        self.update_config_file()
-
-    # Function to update line threshold and write it to the config file
-    def set_line_threshold(self, value):
-        # Read the line sensor values
-        self.config["left_line_threshold"] = value
-        self.config["right_line_threshold"] = value
-        # Update the config file
-        self.update_config_file()
-
-    # Function to update ultrasonic sensor threshold  and write it to the config file
-    def set_ultrasonic_threshold(self, value):
-        # Read the line sensor values
-        self.config["ultrasonic_threshold"] = value
-        # Update the config file
-        self.update_config_file()
 
     # Function to get light inensity from the phototransistors
-    def get_line(self, dir):
+    def get_line(self, line):
         # Check if the direction is valid
-        assert dir in (LEFT, RIGHT)
+        assert line in (LEFT, RIGHT)
 
         # Return the given line sensor value
-        if dir == LEFT:
+        if line == LEFT:
             return self.adc_line_left.read()
-        elif dir == RIGHT:
+        elif line == RIGHT:
             return self.adc_line_right.read()
 
-    def is_line(self, dir):
+    def is_line(self, line):
         # Check if the direction is valid
-        assert dir in (LEFT, RIGHT)
+        assert line in (LEFT, RIGHT)
 
+        # Define feedback LED
+        led = LEFT_LINE if line == LEFT else RIGHT_LINE
+        # Define config prefix
+        prefix = "left" if line == LEFT else "right"
+        # Check for line
+        value = abs(self.get_line(line) - self.config[prefix + "_line_value"]) > self.config[prefix + "_line_threshold"]
+        # Show LED feedback
+        self.set_led(led, value)
+        # Update last line direction if line was detected
+        self.last_line = value if value else self.last_line
         # Return the given line sensor value
-        if dir == LEFT:
-            line = abs(self.get_line(LEFT) - self.config["left_line_value"]) > self.config["left_line_threshold"]
-            self.set_led(LEFT_LINE, line)
-            last_line = LEFT
-            return line
-        elif dir == RIGHT:
-            line = abs(self.get_line(RIGHT) - self.config["right_line_value"]) > self.config["right_line_threshold"]
-            self.set_led(RIGHT_LINE, line)
-            last_line = RIGHT
-            return line
+        return value
 
-    def set_servo(self, dir, speed):
+    def set_servo(self, servo, speed):
         # Check if the direction is valid
-        assert dir in (LEFT, RIGHT)
+        assert servo in (LEFT, RIGHT)
         # Check if the speed is valid
         assert speed <= 100 and speed >= -100
 
         # When the speed didn't change
-        if speed == self.prev_speed[dir]:
+        if speed == self.prev_speed[servo]:
             return
 
-        # Record the new speed
-        self.prev_speed[dir] = speed
+        # Save the new speed
+        self.prev_speed[servo] = speed
 
         # Set the given servo speed
-        if dir == LEFT:
-            if speed == 0:
-                self.pwm_left.duty(0)
-            else:
-                # -100 ... 100 to 33 .. 102
-                self.pwm_left.duty(int(33 + self.config["left_servo_tuning"] + speed * 33 / 100))
-        elif dir == RIGHT:
-            if speed == 0:
-                self.pwm_right.duty(0)
-            else:
-                # -100 ... 100 to 33 .. 102
-                self.pwm_right.duty(int(33 + self.config["right_servo_tuning"] + speed * 33 / 100))
+        if speed == 0:
+            self.pwm[servo].duty(0)
+        else:
+            # Define config prefix
+            prefix = "left" if servo == LEFT else "right"
+            # -100 ... 100 to min_tuning .. max_tuning
+            min_tuning = self.config[prefix + "_servo_min_tuning"]
+            max_tuning = self.config[prefix + "_servo_max_tuning"]
+            self.pwm[servo].duty(int((speed + 100) / 200 * (max_tuning - min_tuning) + min_tuning))
 
     def move(self, dir):
         # Check if the direction is valid
@@ -261,17 +230,11 @@ class Sumorobot(object):
                 self.search_counter = 0
             # When in search mode
             if self.search:
-                # Go forward
-                self.set_servo(LEFT, 100)
-                self.set_servo(RIGHT, -100)
-            elif last_line == RIGHT:
-                # Go left
-                self.set_servo(LEFT, -100)
-                self.set_servo(RIGHT, -100)
+                self.move(FORWARD)
+            elif self.last_line == RIGHT:
+                self.move(LEFT)
             else:
-                # Go right
-                self.set_servo(LEFT, 100)
-                self.set_servo(RIGHT, 100)
+                self.move(RIGHT)
             # Increase search counter
             self.search_counter += 1
         elif dir == FORWARD:
@@ -284,51 +247,26 @@ class Sumorobot(object):
     def update_sensor_feedback(self):
         if self.sensor_feedback:
             # Execute to see LED feedback for sensors
-            self.is_opponent()
+            self.is_sonar()
             self.is_line(LEFT)
             self.is_line(RIGHT)
 
-    def update_sensor_scope(self):
-        self.sensor_scope = dict(
-            left_line = self.get_line(LEFT),
-            right_line = self.get_line(RIGHT),
-            opponent = self.get_opponent_distance(),
-            battery_charge = self.bat_charge.value(),
-            battery_voltage = self.get_battery_voltage()
-        )
-
-    def get_python_code(self):
-        return dict(
-            type = "python_code",
-            val = self.python_code
-        )
-
-    def get_blockly_code(self):
-        return dict(
-            type = "blockly_code",
-            val = self.blockly_code
-        )
-
-    def get_firmware_version(self):
-        return dict(
-            type = "firmware_version",
-            val = self.config["firmware_version"]
-        )
-
     def get_sensor_scope(self):
-        temp = self.sensor_scope
-        temp['type'] = "sensor_scope"
-        return temp
+        # TODO: implement sensor value caching
+        return str(self.get_line(LEFT)) + ',' + \
+            str(self.get_line(RIGHT)) + ',' + \
+            str(self.get_sonar_value()) + ',' + \
+            str(self.bat_charge.value()) + ',' + \
+            str(self.get_battery_level())
 
-    def get_threshold_scope(self):
-        return dict(
-            type = "threshold_scope",
-            left_line_value = self.config["left_line_value"],
-            right_line_value = self.config["right_line_value"],
-            left_line_threshold = self.config["left_line_threshold"],
-            right_line_threshold = self.config["right_line_threshold"],
-            ultrasonic_threshold = self.config["ultrasonic_threshold"]
-        )
+    def get_configuration_scope(self):
+        return str(self.config["sumorobot_name"]) + ',' + \
+            str(self.config["firmware_version"]) + ',' + \
+            str(self.config["left_line_value"]) + ',' + \
+            str(self.config["right_line_value"]) + ',' + \
+            str(self.config["left_line_threshold"]) + ',' + \
+            str(self.config["right_line_threshold"]) + ',' + \
+            str(self.config["sonar_threshold"])
 
     def sleep(self, delay):
         # Check for valid delay

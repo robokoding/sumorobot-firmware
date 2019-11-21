@@ -5,16 +5,13 @@ SERIAL_PORT=/dev/tty.usbserial-1410
 #SERIAL_PORT=/dev/tty.SLAB_USBtoUART
 #SERIAL_PORT=/dev/tty.wchusbserial1410
 
-all: flash delay libs config update reset
+all: flash delay config update reset
 
 delay:
 	sleep 3
 
 reset:
 	esptool.py -p $(SERIAL_PORT) --after hard_reset read_mac
-
-libs:
-	ampy -d 0.5 -p $(SERIAL_PORT) put uwebsockets.py
 
 update:
 	ampy -d 0.5 -p $(SERIAL_PORT) put hal.py
@@ -26,4 +23,4 @@ config:
 
 flash:
 	esptool.py -p $(SERIAL_PORT) -b 460800 erase_flash
-	esptool.py -p $(SERIAL_PORT) -b 460800 write_flash --flash_mode dio 0x1000 esp32-*.bin
+	esptool.py -p $(SERIAL_PORT) -b 460800 write_flash --flash_mode dio 0x1000 esp32*.bin
