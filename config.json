@@ -1,0 +1,17 @@
+{
+	"status_led_pin": 5,
+	"battery_coeff": 2.25,
+	"sumorobot_name": "SumoRobot",
+	"firmware_timestamp": "2019.11.17 16:23:00",
+	"firmware_version": "1.0.0",
+	"left_servo_min_tuning": 1,
+	"left_servo_max_tuning": 100,
+	"right_servo_min_tuning": 1,
+	"right_servo_max_tuning": 100,
+	"sonar_threshold": 40,
+	"boot_code": "code.py",
+	"left_line_value": 1000,
+	"right_line_value": 1000,
+	"left_line_threshold": 1000,
+	"right_line_threshold": 1000
+}
