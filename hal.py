@@ -34,7 +34,7 @@ class Sumorobot(object):
         # LED sensor feedback
         self.sensor_feedback = True
         # Bottom status LED
-        self.status_led = Pin(self.config["status_led_pin"], Pin.OUT)
+        self.status_led = Pin(self.config['status_led_pin'], Pin.OUT)
         # Bottom status LED is in reverse polarity
         self.status_led.value(1)
         # Sensor LEDs
@@ -96,7 +96,7 @@ class Sumorobot(object):
         # When the SumoRobot is not moving
         if self.prev_speed[LEFT] == 0 and self.prev_speed[RIGHT] == 0:
             # Calculate battery voltage
-            battery_voltage = round(self.config["battery_coeff"] * (self.adc_battery.read() * 3.3 / 4096), 2)
+            battery_voltage = round(self.config['battery_coeff'] * (self.adc_battery.read() * 3.3 / 4096), 2)
             # Map battery voltage to percentage
             temp_battery_level = 0.0 + ((100.0 - 0.0) / (4.2 - 3.2)) * (battery_voltage - 3.2)
             # When battery level changed more than 5 percent
@@ -122,7 +122,7 @@ class Sumorobot(object):
         # Get the sonar value
         self.sonar_value = self.get_sonar_value()
         # When the sonar value is small and the ping actually returned
-        if self.sonar_value < self.config["sonar_threshold"] and self.sonar_value > 0:
+        if self.sonar_value < self.config['sonar_threshold'] and self.sonar_value > 0:
             # When not maximum score
             if self.sonar_score < 5:
                 # Increase the sonar score
@@ -145,15 +145,15 @@ class Sumorobot(object):
     # Function to update the config file
     def update_config_file(self):
         # Update the config file
-        with open("config.part", "w") as config_file:
+        with open('config.part', 'w') as config_file:
             config_file.write(ujson.dumps(self.config))
-        os.rename("config.part", "config.json")
+        os.rename('config.part', 'config.json')
 
     # Function to update line calibration and write it to the config file
     def calibrate_line_values(self):
         # Read the line sensor values
-        self.config["left_line_value"] = self.adc_line_left.read()
-        self.config["right_line_value"] = self.adc_line_right.read()
+        self.config['left_line_value'] = self.adc_line_left.read()
+        self.config['right_line_value'] = self.adc_line_right.read()
 
     # Function to get light inensity from the phototransistors
     def get_line(self, line):
@@ -173,9 +173,9 @@ class Sumorobot(object):
         # Define feedback LED
         led = LEFT_LINE if line == LEFT else RIGHT_LINE
         # Define config prefix
-        prefix = "left" if line == LEFT else "right"
+        prefix = 'left' if line == LEFT else 'right'
         # Check for line
-        value = abs(self.get_line(line) - self.config[prefix + "_line_value"]) > self.config[prefix + "_line_threshold"]
+        value = abs(self.get_line(line) - self.config[prefix + '_line_value']) > self.config[prefix + '_line_threshold']
         # Show LED feedback
         self.set_led(led, value)
         # Update last line direction if line was detected
@@ -201,10 +201,10 @@ class Sumorobot(object):
             self.pwm[servo].duty(0)
         else:
             # Define config prefix
-            prefix = "left" if servo == LEFT else "right"
+            prefix = 'left' if servo == LEFT else 'right'
             # -100 ... 100 to min_tuning .. max_tuning
-            min_tuning = self.config[prefix + "_servo_min_tuning"]
-            max_tuning = self.config[prefix + "_servo_max_tuning"]
+            min_tuning = self.config[prefix + '_servo_min_tuning']
+            max_tuning = self.config[prefix + '_servo_max_tuning']
             self.pwm[servo].duty(int((speed + 100) / 200 * (max_tuning - min_tuning) + min_tuning))
 
     def move(self, dir):
@@ -251,20 +251,20 @@ class Sumorobot(object):
 
     def get_sensor_scope(self):
         # TODO: implement sensor value caching
-        return str(self.get_sonar_value()) + ',' + \
-            str(self.get_line(LEFT)) + ',' + \
-            str(self.get_line(RIGHT)) + ',' + \
-            str(self.bat_charge.value()) + ',' + \
-            str(self.get_battery_level())
+        return str(self.get_sonar_value()) + ',' \
+            + str(self.get_line(LEFT)) + ',' \
+            + str(self.get_line(RIGHT)) + ',' \
+            + str(self.bat_charge.value()) + ',' \
+            + str(self.get_battery_level())
 
     def get_configuration_scope(self):
-        return str(self.config["sumorobot_name"]) + ',' + \
-            str(self.config["firmware_version"]) + ',' + \
-            str(self.config["left_line_value"]) + ',' + \
-            str(self.config["right_line_value"]) + ',' + \
-            str(self.config["left_line_threshold"]) + ',' + \
-            str(self.config["right_line_threshold"]) + ',' + \
-            str(self.config["sonar_threshold"])
+        return str(self.config['sumorobot_name']) + ',' \
+            + str(self.config['firmware_version']) + ',' \
+            + str(self.config['left_line_value']) + ',' \
+            + str(self.config['right_line_value']) + ',' \
+            + str(self.config['left_line_threshold']) + ',' \
+            + str(self.config['right_line_threshold']) + ',' \
+            + str(self.config['sonar_threshold'])
 
     def sleep(self, delay):
         # Check for valid delay

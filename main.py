@@ -1,4 +1,3 @@
-import os
 import ujson
 import struct
 import _thread
@@ -15,7 +14,7 @@ _IRQ_CENTRAL_DISCONNECT = const(2)
 _IRQ_GATTS_READ_REQUEST = const(4)
 
 # Open and parse the config file
-with open("config.json", "r") as config_file:
+with open('config.json', 'r') as config_file:
     config = ujson.load(config_file)
 
 # Initialize the SumoRobot object
@@ -48,7 +47,7 @@ def process():
 
         # Try to execute the Python code
         try:
-            python_code = compile(python_code, "snippet", "exec")
+            python_code = compile(python_code, "snippet", 'exec')
             exec(python_code)
         except:
             print("main.py: the code sent had errors")
@@ -108,19 +107,19 @@ def ble_handler(event, data):
             temp_python_code += cmd
         else:
             temp_python_code = b''
-            print('main.py: unknown cmd=', cmd)
+            print("main.py: unknown cmd=" + cmd)
 
 conn_handle = None
 temp_python_code = b''
 python_code = b''
 
 # When user code (code.py) exists
-if 'code.py' in os.listdir():
-    print('main.py: trying to load code.py')
+if 'code.py' in root_files:
+    print("main.py: trying to load code.py")
     # Try to load the user code
     try:
-        with open("code.py", "r") as code:
-            python_code = compile(code.read(), "snippet", "exec")
+        with open('code.py', 'r') as code:
+            python_code = compile(code.read(), "snippet", 'exec')
     except:
         print("main.py: code.py compilation failed")
 

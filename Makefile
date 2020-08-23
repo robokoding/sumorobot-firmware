@@ -1,8 +1,18 @@
 #!/bin/bash
 
-#SERIAL_PORT=/dev/ttyUSB0
-SERIAL_PORT=/dev/tty.usbserial-1420
-#SERIAL_PORT=/dev/tty.SLAB_USBtoUART
+SERIAL_PORT=/dev/ttyUSB0
+
+ifeq (,$(wildcard $(SERIAL_PORT)))
+    SERIAL_PORT=/dev/tty.usbserial-1410
+endif
+
+ifeq (,$(wildcard $(SERIAL_PORT)))
+    SERIAL_PORT=/dev/tty.usbserial-1420
+endif
+
+ifeq (,$(wildcard $(SERIAL_PORT)))
+    SERIAL_PORT=/dev/tty.SLAB_USBtoUART
+endif
 
 all: flash delay config update reset
 
