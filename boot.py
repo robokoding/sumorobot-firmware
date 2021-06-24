@@ -1,10 +1,11 @@
 import os
+import utime
 import machine
-from utime import sleep_ms
+
 
 # Give time to cancel this boot script
 print("Press Ctrl-C to stop new boot script...")
-sleep_ms(1000)
+utime.sleep_ms(1000)
 
 root_files = os.listdir()
 update_files = ['boot.py.new', 'main.py.new', 'hal.py.new']
@@ -13,14 +14,14 @@ files_to_update = []
 # Check for FW updates and verify new FW files
 for file in update_files:
     if file in root_files:
-        print("boot.py: trying to update " + file)
+        print("boot.py: starting to update:", file)
         # Try to load the user code
         try:
             with open(file, 'r') as code:
                 compile(code.read(), "snippet", 'exec')
             files_to_update.append(file)
-        except:
-            print("boot.py: " + file + " compilation failed")
+        except Exception as error:
+            print("boot.py:", file, "compilation failed:", error)
             files_to_update.clear()
             break
 

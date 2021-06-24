@@ -2,7 +2,7 @@
 code.py
 # ignore backup files
 ._*
-* Mac OS stuff
+# Mac OS stuff
 .DS_Store
 # ignore the ESP32 MicroPython binary
 esp32*.bin

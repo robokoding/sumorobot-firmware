@@ -1,45 +1,47 @@
-import ujson
-import struct
+import utime
 import _thread
 import ubluetooth
-from machine import Timer
-from micropython import const
+import micropython
 
 from hal import *
 # Loading libraries takes ca 400ms
 
+
 # BLE events
-_IRQ_CENTRAL_CONNECT = const(1)
-_IRQ_CENTRAL_DISCONNECT = const(2)
-_IRQ_GATTS_READ_REQUEST = const(4)
+_IRQ_CENTRAL_CONNECT = micropython.const(1)
+_IRQ_CENTRAL_DISCONNECT = micropython.const(2)
+_IRQ_GATTS_WRITE = micropython.const(3)
 
-# Open and parse the config file
-with open('config.json', 'r') as config_file:
-    config = ujson.load(config_file)
+# SumoRobot functionality
+sumorobot = Sumorobot()
 
-# Initialize the SumoRobot object
-sumorobot = Sumorobot(config)
 
-# Advertise BLE name (SumoRobot name)
 def advertise_ble_name(name):
-    ble_name = bytes(name, 'ascii')
-    ble_name = bytearray((len(ble_name) + 1, 0x09)) + ble_name
-    ble.gap_advertise(100, bytearray('\x02\x01\x02') + ble_name)
+    payload = b'\x02\x01\x02' + bytes([len(name) + 1])
+    payload += b'\x09' + name.encode()
+    ble.gap_advertise(100, payload)
+
 
 def update_battery_level(timer):
     if conn_handle is not None:
         battery_level = sumorobot.get_battery_level()
         ble.gatts_notify(conn_handle, battery, bytes([battery_level]))
 
-# The code processing thread
-def process():
+
+def sensor_feedback_thread():
+    while True:
+        # Leave time to process other threads
+        utime.sleep_ms(50)
+        # Execute to see LED feedback for sensors
+        sumorobot.update_sensor_feedback()
+
+
+def code_process_thread():
     global prev_bat_level, python_code
 
     while True:
-        # Leave time to process other code
-        sleep_ms(50)
-        # Execute to see LED feedback for sensors
-        sumorobot.update_sensor_feedback()
+        # Leave time to process other threads
+        utime.sleep_ms(50)
 
         # When no code to execute
         if python_code == b'':
@@ -47,18 +49,18 @@ def process():
 
         # Try to execute the Python code
         try:
-            python_code = compile(python_code, "snippet", 'exec')
-            exec(python_code)
-        except:
-            print("main.py: the code sent had errors")
+            exec(compile(python_code, "snippet", 'exec'))
+        except Exception as error:
+            print("main.py: the python code had errors:", error)
         finally:
-            print("main.py: finized execution")
+            print("main.py: finized python code execution")
             # Erase the code
             python_code = b''
             # Stop the robot
             sumorobot.move(STOP)
             # Cancel code termination
             sumorobot.terminate = False
+
 
 # The BLE handler thread
 def ble_handler(event, data):
@@ -69,15 +71,17 @@ def ble_handler(event, data):
         # Turn ON the status LED
         sumorobot.set_led(STATUS, True)
         update_battery_level(None)
+        advertise_ble_name(sumorobot.config['sumorobot_name'])
     elif event is _IRQ_CENTRAL_DISCONNECT:
         conn_handle = None
         # Turn OFF status LED
         sumorobot.set_led(STATUS, False)
         # Advertise with name
         advertise_ble_name(sumorobot.config['sumorobot_name'])
-    elif event is _IRQ_GATTS_READ_REQUEST:
+    elif event is _IRQ_GATTS_WRITE:
         # Read the command
         cmd = ble.gatts_read(rx)
+        print(cmd)
 
         if b'<stop>' in cmd:
             python_code = b''
@@ -96,8 +100,13 @@ def ble_handler(event, data):
             python_code = b''
             sumorobot.move(RIGHT)
         elif b'<sensors>' in cmd:
-            print(sumorobot.get_sensor_scope())
             ble.gatts_notify(conn_handle, tx, sumorobot.get_sensor_scope())
+        elif b'<config>' in cmd:
+            ble.gatts_notify(conn_handle, tx, sumorobot.get_configuration_scope())
+        elif b'<pwm>' in cmd:
+            servo, speed = cmd[5:].decode().split(',')
+            servo = LEFT if servo == 'LEFT' else RIGHT
+            sumorobot.pwm[servo].duty(int(speed)) 
         elif b'<code>' in cmd:
             temp_python_code = b'\n'
         elif b'<code/>' in cmd:
@@ -107,24 +116,28 @@ def ble_handler(event, data):
             temp_python_code += cmd
         else:
             temp_python_code = b''
-            print("main.py: unknown cmd=" + cmd)
+            print("main.py: unknown cmd=", cmd)
+
 
 conn_handle = None
 temp_python_code = b''
 python_code = b''
 
-# When user code (code.py) exists
-if 'code.py' in root_files:
-    print("main.py: trying to load code.py")
-    # Try to load the user code
+# When boot code exists
+if sumorobot.config['boot_code'] in root_files:
+    print("main.py: trying to load", sumorobot.config['boot_code'])
+    # Try to load and compile the boot code
     try:
-        with open('code.py', 'r') as code:
-            python_code = compile(code.read(), "snippet", 'exec')
-    except:
-        print("main.py: code.py compilation failed")
+        with open(sumorobot.config['boot_code'], 'r') as file:
+            boot_code = file.read()
+            compile(boot_code, "snippet", 'exec')
+            python_code = boot_code
+    except Exception as error:
+        print("main.py:", sumorobot.config['boot_code'], "compilation failed:", error)
 
 # Start BLE
 ble = ubluetooth.BLE()
+ble.config(gap_name=sumorobot.config['sumorobot_name'])
 ble.active(True)
 
 # Register the BLE hander
@@ -160,11 +173,12 @@ ble.gatts_write(firmware, sumorobot.config['firmware_version'])
 # Start BLE advertising with name
 advertise_ble_name(sumorobot.config['sumorobot_name'])
 
-# Start the code processing thread
-_thread.start_new_thread(process, ())
+# Start the threads
+_thread.start_new_thread(code_process_thread, ())
+_thread.start_new_thread(sensor_feedback_thread, ())
 
 # Start BLE battery percentage update timer
-battery_timer = Timer(Timer.PERIODIC)
+battery_timer = machine.Timer(machine.Timer.PERIODIC)
 battery_timer.init(period=3000, callback=update_battery_level)
 
 # Clean up
