@@ -47,6 +47,8 @@ def code_process_thread():
         if python_code == b'':
             continue
 
+        sumorobot.terminate = False
+
         # Try to execute the Python code
         try:
             exec(compile(python_code, "snippet", 'exec'))
@@ -58,8 +60,6 @@ def code_process_thread():
             python_code = b''
             # Stop the robot
             sumorobot.move(STOP)
-            # Cancel code termination
-            sumorobot.terminate = False
 
 
 # The BLE handler thread
