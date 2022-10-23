@@ -213,11 +213,11 @@ class Sumorobot(object):
                 # Reverse the speed, so smaller negative numbers represent slower speeds and larger
                 # faster speeds
                 speed = -1 * (speed + 101)
-                self.pwm[servo].duty(int((speed + 1) * (max_tuning - min_tuning) / -99 + min_tuning))
-                print(int((speed + 1) * (max_tuning - min_tuning) / -99 + min_tuning))
+                speed = int((speed + 1) * (max_tuning - min_tuning) / -99 + min_tuning)
+                self.pwm[servo].duty(speed)
             else:
-                self.pwm[servo].duty(int(speed * (max_tuning - min_tuning) / 100 + min_tuning))
-                print(int(speed * (max_tuning - min_tuning) / 100 + min_tuning))
+                speed = int(speed * (max_tuning - min_tuning) / 100 + min_tuning)
+                self.pwm[servo].duty(speed)
 
 
     def move(self, dir):
