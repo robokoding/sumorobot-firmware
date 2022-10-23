@@ -29,7 +29,7 @@ erase:
 	esptool.py -p $(SERIAL_PORT) -b $(FLASH_BAUD) erase_flash
 
 image:
-	esptool.py -p $(SERIAL_PORT) -b $(FLASH_BAUD) read_flash 0x1000 0x250000 sumofirmware.bin
+	esptool.py -p $(SERIAL_PORT) -b $(FLASH_BAUD) read_flash 0x1000 0x3FF000 sumofirmware.bin
 
 flash:
 	esptool.py -p $(SERIAL_PORT) -b $(FLASH_BAUD) write_flash --flash_mode dio 0x1000 $(FLASH_IMAGE)
